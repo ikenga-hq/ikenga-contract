@@ -167,15 +167,22 @@ export const CronEntrySchema = z.object({
   env_from_settings: z.array(z.string()).default([]),
 });
 
-/** Local SQLite capability (api ≥ 2). Threads the logical db name into the
- *  iframe host context so the pkg can call `db_query` without hard-coding it.
- *  Mirrors `SqliteCapability` in `shell/src-tauri/src/pkg/manifest.rs`. */
-export const SqliteCapabilitySchema = z.object({
+export const SqliteCapabilityObjectSchema = z.object({
   /** Logical DB name. Currently only `"ikenga.local"` is supported.
    *  Defaults to `"ikenga.local"` when omitted. */
   db: z.string().default('ikenga.local'),
 });
-export type SqliteCapability = z.infer<typeof SqliteCapabilitySchema>;
+
+/** Local SQLite capability (api ≥ 2). Threads the logical db name into the
+ *  iframe host context so the pkg can call `db_query` without hard-coding it.
+ *  Accepts boolean `true` (defaults `db` to `"ikenga.local"`), `false` (disabled),
+ *  or an object `{ db?: string }`.
+ *  Mirrors `SqliteCapability` in `shell/src-tauri/src/pkg/manifest.rs`. */
+export const SqliteCapabilitySchema = z.union([
+  z.boolean().transform((v) => (v ? { db: 'ikenga.local' } : undefined)),
+  SqliteCapabilityObjectSchema,
+]);
+export type SqliteCapability = z.infer<typeof SqliteCapabilityObjectSchema>;
 
 /** Supabase capability. Mirrors `SupabaseCapability` in
  *  `shell/src-tauri/src/pkg/manifest.rs`. */

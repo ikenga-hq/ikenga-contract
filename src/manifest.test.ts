@@ -238,3 +238,27 @@ test('Manifest: allowed_origins empty array survives as an explicit lockdown', (
   });
   assert.deepEqual(m.capabilities?.webview?.allowed_origins, []);
 });
+
+test('Manifest: capabilities.sqlite accepts boolean true', () => {
+  const m = ManifestSchema.parse({
+    ...BASE,
+    capabilities: { sqlite: true },
+  });
+  assert.deepEqual(m.capabilities?.sqlite, { db: 'ikenga.local' });
+});
+
+test('Manifest: capabilities.sqlite accepts boolean false as disabled', () => {
+  const m = ManifestSchema.parse({
+    ...BASE,
+    capabilities: { sqlite: false },
+  });
+  assert.equal(m.capabilities?.sqlite, undefined);
+});
+
+test('Manifest: capabilities.sqlite accepts object config', () => {
+  const m = ManifestSchema.parse({
+    ...BASE,
+    capabilities: { sqlite: { db: 'custom.db' } },
+  });
+  assert.deepEqual(m.capabilities?.sqlite, { db: 'custom.db' });
+});
