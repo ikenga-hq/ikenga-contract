@@ -88,7 +88,7 @@
     "dev": "tsc -p tsconfig.json --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "generate:schemas": "node scripts/generate-schemas.mjs",
-    "test": "node --test --import=tsx 'src/**/*.test.ts'"
+    "test": "node --test --import=tsx \"src/**/*.test.ts\""
   },
   "dependencies": {
     "zod": "^3.23.0",
