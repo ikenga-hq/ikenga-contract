@@ -71,6 +71,10 @@
     "./app-bridge": {
       "types": "./dist/app-bridge.d.ts",
       "import": "./dist/app-bridge.js"
+    },
+    "./ngwa": {
+      "types": "./dist/ngwa.d.ts",
+      "import": "./dist/ngwa.js"
     }
   },
   "files": [

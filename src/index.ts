@@ -12,6 +12,7 @@ export * from './window.js';
 export * from './action-frontmatter.js';
 export * from './host-context.js';
 export * from './app-bridge.js';
+export * from './ngwa.js';
 
 /** This package's own version. */
 export const CONTRACT_PACKAGE_VERSION = '0.5.0' as const;
