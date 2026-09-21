@@ -15,4 +15,4 @@ export * from './app-bridge.js';
 export * from './ngwa.js';
 
 /** This package's own version. */
-export const CONTRACT_PACKAGE_VERSION = '0.5.0' as const;
+export const CONTRACT_PACKAGE_VERSION = '0.18.0' as const;

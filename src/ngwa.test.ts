@@ -191,8 +191,52 @@ test('Ngwa: every field name in draft §2 is present on a parsed fixture', () =>
   ]);
   assert.deepEqual(keys(snap.sources.kernel), ['count', 'error', 'ok']);
 
-  // …and nothing anywhere in the parsed snapshot is camelCase.
-  assertSnakeCaseKeys(snap);
+  // …and the SOURCE fixture is snake_case throughout. Asserting this on the
+  // PARSED value would be vacuous: Zod strips unknown keys, so a camelCase key
+  // could never survive to be seen. Audited and corrected, Round 13.
+  assertSnakeCaseKeys(SNAPSHOT);
+});
+
+// ── Round 13 — the real drift guard ────────────────────────────────────────
+//
+// The parity assertions above catch a field REMOVED from a schema (the parsed
+// key set shrinks). They cannot catch a field the producer ADDS, because Zod
+// strips unknown keys before any assertion can see them. These two tests cover
+// that direction: the first pins the strip as documented behaviour, the second
+// is the guard WP-14's Rust producer is checked against.
+
+test('Ngwa: unknown keys are STRIPPED, not preserved (documents the default)', () => {
+  const parsed = NgwaPlacementSchema.parse({
+    ...PLACEMENT,
+    linkTarget: 'camelCase twin of link_target',
+    EXTRA_unknown: 1,
+  }) as Record<string, unknown>;
+
+  assert.equal('linkTarget' in parsed, false);
+  assert.equal('EXTRA_unknown' in parsed, false);
+  assert.equal(parsed.link_target, PLACEMENT.link_target);
+});
+
+test('Ngwa: a .strict() variant REJECTS an unknown key (the producer-drift guard)', () => {
+  // DEC-26: the shipped schemas stay permissive so a snapshot never fails to
+  // parse in the field. Drift is caught here, and in WP-14's own parity test
+  // against a real `ngwa_snapshot` payload.
+  assert.equal(NgwaPlacementSchema.strict().safeParse(PLACEMENT).success, true);
+
+  for (const stray of ['linkTarget', 'inStore', 'managedBy', 'whatever']) {
+    const res = NgwaPlacementSchema.strict().safeParse({ ...PLACEMENT, [stray]: 'x' });
+    assert.equal(res.success, false, `strict parse should reject ${stray}`);
+  }
+
+  assert.equal(NgwaItemSchema.strict().safeParse(ITEM).success, true);
+  assert.equal(
+    NgwaItemSchema.strict().safeParse({ ...ITEM, displayName: 'camel twin' }).success,
+    false,
+  );
+  assert.equal(
+    NgwaOriginSchema.strict().safeParse({ ...ORIGIN, resolvedVersion: '1.0.0' }).success,
+    false,
+  );
 });
 
 test('Ngwa: the three frozen enum lists match §2 exactly', () => {
