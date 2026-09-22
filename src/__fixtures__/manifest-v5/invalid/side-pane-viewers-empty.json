@@ -1,0 +1,9 @@
+{
+  "id": "com.ikenga.sidepane-empty",
+  "name": "Side Pane Empty",
+  "version": "1.0.0",
+  "ikenga_api": "5",
+  "ui": {
+    "side_pane_viewers": []
+  }
+}

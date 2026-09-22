@@ -1,0 +1,26 @@
+{
+  "id": "com.ikenga.companion-demo",
+  "name": "Companion Demo",
+  "version": "1.0.0",
+  "ikenga_api": "5",
+  "ui": {
+    "routes": [
+      { "path": "/session-state", "kind": "iframe", "source": "session-state.html" },
+      { "path": "/project-state", "kind": "iframe", "source": "project-state.html" }
+    ],
+    "companion_panels": [
+      {
+        "id": "session-state",
+        "title": "Session State",
+        "icon": "activity",
+        "route": "/session-state",
+        "session_scoped": true
+      },
+      {
+        "id": "project-state",
+        "title": "Project State",
+        "route": "/project-state"
+      }
+    ]
+  }
+}

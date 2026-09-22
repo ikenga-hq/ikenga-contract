@@ -1,0 +1,14 @@
+{
+  "id": "com.ikenga.bad-span",
+  "name": "Bad Span",
+  "version": "1.0.0",
+  "ikenga_api": "5",
+  "ui": {
+    "routes": [
+      { "path": "/w/main", "kind": "iframe", "source": "w-main.html" }
+    ],
+    "widgets": [
+      { "id": "main", "title": "Main", "route": "/w/main", "span": "large" }
+    ]
+  }
+}

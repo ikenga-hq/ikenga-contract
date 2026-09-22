@@ -1,0 +1,16 @@
+{
+  "id": "com.ikenga.nav-only",
+  "name": "Nav Only",
+  "version": "0.9.0",
+  "ikenga_api": "1",
+  "ui": {
+    "routes": [
+      { "path": "/home", "kind": "iframe", "source": "home.html" },
+      { "path": "/settings", "kind": "iframe", "source": "settings.html" }
+    ],
+    "nav": [
+      { "id": "home", "label": "Home", "icon": "home", "section": "main", "route": "/home" },
+      { "id": "settings", "label": "Settings", "icon": "settings", "route": "/settings" }
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "id": "com.ikenga.actions-demo",
+  "name": "Actions Demo",
+  "version": "1.0.0",
+  "ikenga_api": "5",
+  "ui": {
+    "routes": [
+      { "path": "/review", "kind": "iframe", "source": "review.html" }
+    ],
+    "context_actions": [
+      {
+        "id": "hand-to-chi",
+        "label": "Hand to Chi",
+        "when": { "kind": "file", "glob": "*.md" },
+        "run": {
+          "kind": "dispatch",
+          "prompt": "Review {{file.path}} in {{project.root}}",
+          "target": "chi"
+        }
+      },
+      {
+        "id": "open-artifact",
+        "label": "Open Artifact",
+        "when": { "kind": "artifact" },
+        "run": { "kind": "view", "route": "/review" }
+      },
+      {
+        "id": "summarize-session",
+        "label": "Summarize Session",
+        "when": { "kind": "session" },
+        "run": { "kind": "dispatch", "prompt": "Summarize {{pane.url}}" }
+      },
+      {
+        "id": "triage-ngwa",
+        "label": "Triage Item",
+        "when": { "kind": "ngwa-item", "kinds": ["task", "alert"] },
+        "run": { "kind": "view", "route": "/review" }
+      }
+    ]
+  }
+}

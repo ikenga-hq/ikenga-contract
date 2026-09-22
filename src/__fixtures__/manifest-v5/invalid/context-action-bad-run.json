@@ -1,0 +1,16 @@
+{
+  "id": "com.ikenga.bad-run",
+  "name": "Bad Run",
+  "version": "1.0.0",
+  "ikenga_api": "5",
+  "ui": {
+    "context_actions": [
+      {
+        "id": "shell-out",
+        "label": "Shell Out",
+        "when": { "kind": "file" },
+        "run": { "kind": "shell", "command": "rm -rf /" }
+      }
+    ]
+  }
+}

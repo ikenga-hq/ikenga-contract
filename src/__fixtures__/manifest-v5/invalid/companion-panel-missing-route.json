@@ -1,0 +1,11 @@
+{
+  "id": "com.ikenga.no-panel-route",
+  "name": "No Panel Route",
+  "version": "1.0.0",
+  "ikenga_api": "5",
+  "ui": {
+    "companion_panels": [
+      { "id": "state", "title": "State", "session_scoped": true }
+    ]
+  }
+}

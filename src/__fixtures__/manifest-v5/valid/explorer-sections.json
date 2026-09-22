@@ -1,0 +1,31 @@
+{
+  "id": "com.ikenga.explorer-demo",
+  "name": "Explorer Demo",
+  "version": "1.0.0",
+  "ikenga_api": "5",
+  "ui": {
+    "explorer_sections": [
+      {
+        "id": "open-tasks",
+        "title": "Open Tasks",
+        "icon": "check-circle",
+        "order": 10,
+        "data_route": "/pkg/com.ikenga.explorer-demo/sections/open-tasks"
+      },
+      {
+        "id": "recent-files",
+        "title": "Recent Files",
+        "data_route": "/pkg/com.ikenga.explorer-demo/sections/recent-files"
+      }
+    ]
+  },
+  "iyke": {
+    "routes": [
+      {
+        "method": "GET",
+        "path": "/pkg/com.ikenga.explorer-demo/sections/open-tasks",
+        "handler": "sidecar:pa-ikenga-explorer-demo sections"
+      }
+    ]
+  }
+}

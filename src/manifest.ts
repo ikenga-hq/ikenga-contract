@@ -17,7 +17,14 @@ import { BrowserEngineSchema } from './browser.js';
 // v3 (ADR-017): added capabilities.http / .secrets / .invoke (trusted-cap tier)
 // + top-level optional `signature`. All additive; api=1/2 manifests parse
 // unchanged. Elevated caps are inert unless the pkg is trusted.
-export const IKENGA_API_VERSION = 4 as const;
+// v5 (WP-27, G-MANIFEST-V5 — plans/shell-ux-rearchitecture/drafts/g-manifest-v5.md,
+// frozen 2026-09-22 Round 24): added ui.views[] / ui.explorer_sections[] (+ the
+// ExplorerSectionData wire shape) / ui.companion_panels[] / ui.context_actions[] /
+// ui.widgets[]; ui.nav marked a deprecated alias (shell-side mapping, one-release
+// lifetime, §4); ui.side_pane_viewers hard-retired — declaring it now fails
+// validation. All additions are optional-with-default, so api=1..4 manifests
+// parse unchanged; the support window stays [MIN_SUPPORTED, CURRENT].
+export const IKENGA_API_VERSION = 5 as const;
 export const IKENGA_API_MIN_SUPPORTED = 1 as const;
 
 // ---------- Sub-schemas ----------
@@ -123,17 +130,150 @@ export const ManifestUiSessionSchema = z.object({
 });
 export type ManifestUiSession = z.infer<typeof ManifestUiSessionSchema>;
 
+// ---------- Manifest v5 contribution blocks ----------
+// Frozen type block from G-MANIFEST-V5 §2
+// (plans/shell-ux-rearchitecture/drafts/g-manifest-v5.md, frozen 2026-09-22,
+// Round 24 / DEC-34). Copied verbatim — do not reinterpret. `UiBlock` gains
+// `views`, `explorer_sections`, `companion_panels`, `context_actions`,
+// `widgets` (all optional-with-default); `nav` keeps its field and type.
+
+// ── ui.views[] — replaces ui.nav (alias window §4) ────────────────────────
+export const ViewEntrySchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  icon: z.string().optional(),          // lucide name; same vocabulary as pins
+  /** A pkg UI namespace path, e.g. `/grid` → pane route `pkg://<id>/grid`.
+   *  Must match a declared `ui.routes[]` path (§6 Q3). */
+  route: z.string(),
+  /** Honoured ONCE, at first install (Round 2 Q1). Updates never re-pin;
+   *  unpin is permanent. Kernel "first install" = no prior install row. */
+  pin_on_install: z.boolean().default(false),
+}).strict();
+export type ViewEntry = z.infer<typeof ViewEntrySchema>;
+
+// ── ui.explorer_sections[] — Project Explorer sections (G-STATE §1 id rule) ─
+export const ExplorerSectionEntrySchema = z.object({
+  id: z.string(),                       // pkg-local; state id = `${pkg_id}:${id}`
+  title: z.string(),
+  icon: z.string().optional(),
+  order: z.number().int().optional(),   // default: declaration order; ties by pkg id
+  /** GET iyke route under `/pkg/<id>/` returning ExplorerSectionData. */
+  data_route: z.string(),
+}).strict();
+export type ExplorerSectionEntry = z.infer<typeof ExplorerSectionEntrySchema>;
+
+/** The JSON a `data_route` returns. The shell renders it natively — the
+ *  section is data, never an embedded iframe (P4 fix, discussion §3.2). */
+export const ExplorerSectionDataSchema = z.object({
+  rows: z.array(z.object({
+    id: z.string(),
+    label: z.string(),
+    badge: z.object({
+      count: z.number().int().optional(),
+      tooltip: z.string().optional(),
+    }).optional(),
+    /** Pane target on click: a pkg route (`pkg://...`) or a shell route (`/...`). */
+    open: z.string().optional(),
+  })).default([]),
+  as_of_ms: z.number().optional(),
+}).strict();
+export type ExplorerSectionData = z.infer<typeof ExplorerSectionDataSchema>;
+
+// ── ui.companion_panels[] — Companion state panels (ADR-021: state only) ───
+export const CompanionPanelEntrySchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  icon: z.string().optional(),
+  /** Pane route rendered in the panel slot (an iframe view). Must render
+   *  state, never model prose — ADR-021 checklist applies. */
+  route: z.string(),
+  /** When true the shell threads `panelScopeSessionId` (the selected
+   *  Companion session tab) through the AppBridge hostContext. */
+  session_scoped: z.boolean().default(false),
+}).strict();
+export type CompanionPanelEntry = z.infer<typeof CompanionPanelEntrySchema>;
+
+// ── ui.context_actions[] — selector-scoped menu contributions ─────────────
+export const ContextSelectorSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('file'), glob: z.string().optional() }),
+  z.object({ kind: z.literal('artifact') }),
+  z.object({ kind: z.literal('session') }),
+  z.object({ kind: z.literal('ngwa-item'), kinds: z.array(z.string()).optional() }),
+]);
+export type ContextSelector = z.infer<typeof ContextSelectorSchema>;
+
+export const ContextActionRunSchema = z.discriminatedUnion('kind', [
+  /** "Hand to Chi" — fills the Companion dispatch bar (spec §5.3 resolveTarget).
+   *  `prompt` is a template with {{file.path}}, {{selection}}, {{project.root}},
+   *  {{pane.url}}, {{branch}} — the D-06 variable set. */
+  z.object({ kind: z.literal('dispatch'), prompt: z.string(), target: z.string().optional() }),
+  z.object({ kind: z.literal('view'), route: z.string() }),
+]);
+export type ContextActionRun = z.infer<typeof ContextActionRunSchema>;
+
+export const ContextActionEntrySchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  when: ContextSelectorSchema,
+  run: ContextActionRunSchema,
+}).strict();
+export type ContextActionEntry = z.infer<typeof ContextActionEntrySchema>;
+
+// ── ui.widgets[] — project-dashboard widgets (formalised home canvas) ──────
+export const WidgetEntrySchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  route: z.string(),                    // iframe view rendered in the dashboard grid
+  span: z.enum(['small', 'medium', 'wide']).default('medium'),
+}).strict();
+export type WidgetEntry = z.infer<typeof WidgetEntrySchema>;
+
 export const UiBlockSchema = z.object({
+  /** @deprecated v5 alias (G-MANIFEST-V5 §4): the shell reads `nav[i]` as
+   *  `views[i]` = `{id, title: label, icon, route, pin_on_install: i === 0}`
+   *  for exactly one shell release, then deletes the mapping. Field and type
+   *  are unchanged; a manifest declaring both `nav` and `views` still parses
+   *  (`nav` is ignored with a shell-side warning). New manifests declare
+   *  `views` instead. */
   nav: z.array(NavEntrySchema).default([]),
   routes: z.array(UiRouteSchema).default([]),
   command_palette: z.array(CommandPaletteEntrySchema).default([]),
-  side_pane_viewers: z.array(SidePaneViewerSchema).default([]),
+  /** v5 hard-retire (G-MANIFEST-V5 §8 Q1 / DEC-34): `side_pane_viewers` was
+   *  removed from the block; declaring it fails validation outright.
+   *  `z.never()` is the contract-side mirror of the Rust canonical rejection
+   *  (skills/commands-bundling precedent). `SidePaneViewerSchema` stays
+   *  exported for tooling that reads historical manifests. */
+  side_pane_viewers: z.never().optional(),
+  // ── v5 contribution blocks (G-MANIFEST-V5 §2; all optional-with-default) ──
+  views: z.array(ViewEntrySchema).default([]),
+  explorer_sections: z.array(ExplorerSectionEntrySchema).default([]),
+  companion_panels: z.array(CompanionPanelEntrySchema).default([]),
+  context_actions: z.array(ContextActionEntrySchema).default([]),
+  widgets: z.array(WidgetEntrySchema).default([]),
   /** Per-directive CSP overrides for the iframe content. */
   csp: z.record(z.array(z.string())).optional(),
   /** Per-directive Permission-Policy values. */
   permissions: z.record(z.array(z.string())).optional(),
   session: ManifestUiSessionSchema.optional(),
-}).default({});
+})
+.superRefine((ui, ctx) => {
+  // G-MANIFEST-V5 §2b / DEC-34 Q2: a `ViewEntry.route` must reference a path
+  // declared in the same manifest's `ui.routes[]`. Companion-panel and widget
+  // routes are deliberately NOT reference-checked (§2b scopes the rule to
+  // views only).
+  const routePaths = new Set(ui.routes.map((r) => r.path));
+  ui.views.forEach((view, i) => {
+    if (!routePaths.has(view.route)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['views', i, 'route'],
+        message: `ui.views[${i}].route "${view.route}" does not match any declared ui.routes[] path`,
+      });
+    }
+  });
+})
+.default({});
+export type UiBlock = z.infer<typeof UiBlockSchema>;
 
 export const SettingsFieldSchema = z.object({
   key: z.string(),

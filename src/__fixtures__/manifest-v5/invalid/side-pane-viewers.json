@@ -1,0 +1,14 @@
+{
+  "id": "com.ikenga.sidepane",
+  "name": "Side Pane",
+  "version": "1.0.0",
+  "ikenga_api": "5",
+  "ui": {
+    "routes": [
+      { "path": "/viewer", "kind": "iframe", "source": "viewer.html" }
+    ],
+    "side_pane_viewers": [
+      { "id": "viewer", "label": "Viewer", "route": "/viewer" }
+    ]
+  }
+}

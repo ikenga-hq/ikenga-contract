@@ -1,0 +1,42 @@
+{
+  "id": "com.ikenga.full-v5",
+  "name": "Full v5",
+  "version": "2.0.0",
+  "ikenga_api": "5",
+  "author": { "name": "Ikenga", "key": "ed25519:abc" },
+  "ui": {
+    "routes": [
+      { "path": "/grid", "kind": "iframe", "source": "grid.html" },
+      { "path": "/panel", "kind": "iframe", "source": "panel.html" },
+      { "path": "/w/main", "kind": "iframe", "source": "w-main.html" }
+    ],
+    "views": [
+      { "id": "grid", "title": "Grid", "icon": "layout-grid", "route": "/grid", "pin_on_install": true }
+    ],
+    "explorer_sections": [
+      { "id": "queue", "title": "Queue", "order": 5, "data_route": "/pkg/com.ikenga.full-v5/queue" }
+    ],
+    "companion_panels": [
+      { "id": "state", "title": "State", "route": "/panel", "session_scoped": true }
+    ],
+    "context_actions": [
+      {
+        "id": "dispatch-file",
+        "label": "Dispatch File",
+        "when": { "kind": "file" },
+        "run": { "kind": "dispatch", "prompt": "Handle {{file.path}}" }
+      }
+    ],
+    "widgets": [
+      { "id": "main", "title": "Main", "route": "/w/main", "span": "medium" }
+    ],
+    "command_palette": [
+      { "id": "refresh", "label": "Refresh", "action": { "type": "whatever-untyped" } }
+    ],
+    "session": { "persistence": "keep" }
+  },
+  "permissions": {
+    "net": ["https://api.example.com/"],
+    "events": ["pkg://lifecycle"]
+  }
+}
