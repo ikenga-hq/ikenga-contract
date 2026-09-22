@@ -1,0 +1,17 @@
+{
+  "id": "com.ikenga.nav-and-views",
+  "name": "Nav And Views",
+  "version": "1.0.0",
+  "ikenga_api": "5",
+  "ui": {
+    "routes": [
+      { "path": "/grid", "kind": "iframe", "source": "grid.html" }
+    ],
+    "nav": [
+      { "id": "legacy-grid", "label": "Legacy Grid", "icon": "grid", "route": "/grid" }
+    ],
+    "views": [
+      { "id": "grid", "title": "Grid", "icon": "layout-grid", "route": "/grid" }
+    ]
+  }
+}

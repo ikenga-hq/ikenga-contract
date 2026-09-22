@@ -1,0 +1,20 @@
+{
+  "id": "com.ikenga.legacy-v4",
+  "name": "Legacy v4",
+  "version": "1.4.0",
+  "ikenga_api": "4",
+  "ui": {
+    "routes": [
+      { "path": "/home", "kind": "iframe", "source": "home.html" }
+    ],
+    "nav": [
+      { "id": "home", "label": "Home", "icon": "home", "route": "/home" }
+    ],
+    "command_palette": [
+      { "id": "sync", "label": "Sync", "shortcut": "ctrl+shift+s", "action": "sync.now" }
+    ]
+  },
+  "capabilities": {
+    "webview": { "child_webviews": true, "partitions": ["default"] }
+  }
+}

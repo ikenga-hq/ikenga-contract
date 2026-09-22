@@ -1,0 +1,18 @@
+{
+  "id": "com.ikenga.widgets-demo",
+  "name": "Widgets Demo",
+  "version": "1.0.0",
+  "ikenga_api": "5",
+  "ui": {
+    "routes": [
+      { "path": "/w/stats", "kind": "iframe", "source": "w-stats.html" },
+      { "path": "/w/feed", "kind": "iframe", "source": "w-feed.html" },
+      { "path": "/w/pipeline", "kind": "iframe", "source": "w-pipeline.html" }
+    ],
+    "widgets": [
+      { "id": "stats", "title": "Stats", "route": "/w/stats", "span": "small" },
+      { "id": "feed", "title": "Feed", "route": "/w/feed" },
+      { "id": "pipeline", "title": "Pipeline", "route": "/w/pipeline", "span": "wide" }
+    ]
+  }
+}

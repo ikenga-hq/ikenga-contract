@@ -1,0 +1,11 @@
+{
+  "id": "com.ikenga.no-data-route",
+  "name": "No Data Route",
+  "version": "1.0.0",
+  "ikenga_api": "5",
+  "ui": {
+    "explorer_sections": [
+      { "id": "queue", "title": "Queue", "order": 1 }
+    ]
+  }
+}

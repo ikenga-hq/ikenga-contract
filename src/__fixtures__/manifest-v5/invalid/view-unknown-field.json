@@ -1,0 +1,14 @@
+{
+  "id": "com.ikenga.strict-view",
+  "name": "Strict View",
+  "version": "1.0.0",
+  "ikenga_api": "5",
+  "ui": {
+    "routes": [
+      { "path": "/grid", "kind": "iframe", "source": "grid.html" }
+    ],
+    "views": [
+      { "id": "grid", "title": "Grid", "route": "/grid", "label": "not-a-field" }
+    ]
+  }
+}

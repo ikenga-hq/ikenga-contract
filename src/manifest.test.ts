@@ -1,15 +1,25 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync, readdirSync } from 'node:fs';
 
 import {
+  CompanionPanelEntrySchema,
+  ContextActionEntrySchema,
+  ContextActionRunSchema,
+  ContextSelectorSchema,
+  ExplorerSectionDataSchema,
+  ExplorerSectionEntrySchema,
   HttpCapabilitySchema,
   IKENGA_API_VERSION,
   InvokeCapabilitySchema,
+  isCompatible,
   ManifestSchema,
   NamedSecretSchema,
   RequiresEntrySchema,
   RequireSourceSchema,
   SecretsCapabilitySchema,
+  ViewEntrySchema,
+  WidgetEntrySchema,
 } from './manifest.js';
 
 // ─── WP-11 — `requires` field (ADR-015 §3) ──────────────────────────────────
@@ -89,8 +99,8 @@ test('Manifest: requires defaults to [] when absent (pre-Phase-4 manifest)', () 
 
 // ─── WP-01 — trusted-cap tier (ADR-017): http / secrets / invoke + signature ─
 
-test('IKENGA_API_VERSION is 4 (WP-01 Manifest v4)', () => {
-  assert.equal(IKENGA_API_VERSION, 4);
+test('IKENGA_API_VERSION is 5 (WP-27 Manifest v5)', () => {
+  assert.equal(IKENGA_API_VERSION, 5);
 });
 
 test('HttpCapability: auth_header defaults to Authorization; auth_secret optional', () => {
@@ -261,4 +271,342 @@ test('Manifest: capabilities.sqlite accepts object config', () => {
     capabilities: { sqlite: { db: 'custom.db' } },
   });
   assert.deepEqual(m.capabilities?.sqlite, { db: 'custom.db' });
+});
+
+// ─── WP-27 — manifest v5 contribution blocks (G-MANIFEST-V5, frozen §2) ─────
+
+test('isCompatible: window is [1, 5] after the v5 bump', () => {
+  assert.equal(isCompatible('1'), true);
+  assert.equal(isCompatible('4'), true);
+  assert.equal(isCompatible('5'), true);
+  assert.equal(isCompatible('6'), false);
+  assert.equal(isCompatible('0'), false);
+  assert.equal(isCompatible('abc'), false);
+});
+
+test('ViewEntry: full shape parses; pin_on_install defaults false', () => {
+  const v = ViewEntrySchema.parse({
+    id: 'grid',
+    title: 'Grid',
+    icon: 'layout-grid',
+    route: '/grid',
+    pin_on_install: true,
+  });
+  assert.equal(v.pin_on_install, true);
+  const minimal = ViewEntrySchema.parse({ id: 'd', title: 'D', route: '/d' });
+  assert.equal(minimal.pin_on_install, false);
+  assert.equal(minimal.icon, undefined);
+});
+
+test('ViewEntry: .strict rejects unknown field (mirrors Rust deny_unknown_fields)', () => {
+  assert.throws(() =>
+    ViewEntrySchema.parse({ id: 'x', title: 'X', route: '/x', label: 'nope' }),
+  );
+});
+
+test('ExplorerSectionEntry: full shape parses; order optional int', () => {
+  const e = ExplorerSectionEntrySchema.parse({
+    id: 'open-tasks',
+    title: 'Open Tasks',
+    icon: 'check-circle',
+    order: 10,
+    data_route: '/pkg/com.ikenga.x/sections/open-tasks',
+  });
+  assert.equal(e.order, 10);
+  const minimal = ExplorerSectionEntrySchema.parse({
+    id: 's',
+    title: 'S',
+    data_route: '/pkg/com.ikenga.x/s',
+  });
+  assert.equal(minimal.order, undefined);
+  assert.equal(minimal.icon, undefined);
+});
+
+test('ExplorerSectionEntry: missing data_route fails; .strict rejects extras; non-int order fails', () => {
+  assert.throws(() =>
+    ExplorerSectionEntrySchema.parse({ id: 's', title: 'S' }),
+  );
+  assert.throws(() =>
+    ExplorerSectionEntrySchema.parse({ id: 's', title: 'S', data_route: '/p', bogus: 1 }),
+  );
+  assert.throws(() =>
+    ExplorerSectionEntrySchema.parse({ id: 's', title: 'S', data_route: '/p', order: 1.5 }),
+  );
+});
+
+test('ExplorerSectionData: rows default []; full wire shape parses', () => {
+  const empty = ExplorerSectionDataSchema.parse({});
+  assert.deepEqual(empty.rows, []);
+  const d = ExplorerSectionDataSchema.parse({
+    rows: [
+      {
+        id: 'r1',
+        label: 'Row 1',
+        badge: { count: 3, tooltip: 'three' },
+        open: 'pkg://com.ikenga.x/detail',
+      },
+      { id: 'r2', label: 'Row 2' },
+    ],
+    as_of_ms: 1727000000000,
+  });
+  assert.equal(d.rows.length, 2);
+  assert.equal(d.rows[0]?.badge?.count, 3);
+  assert.equal(d.as_of_ms, 1727000000000);
+});
+
+test('ExplorerSectionData: .strict rejects unknown top-level field', () => {
+  assert.throws(() => ExplorerSectionDataSchema.parse({ rows: [], bogus: true }));
+});
+
+test('CompanionPanelEntry: full shape parses; session_scoped defaults false', () => {
+  const p = CompanionPanelEntrySchema.parse({
+    id: 'state',
+    title: 'State',
+    icon: 'activity',
+    route: '/state',
+    session_scoped: true,
+  });
+  assert.equal(p.session_scoped, true);
+  const minimal = CompanionPanelEntrySchema.parse({ id: 's', title: 'S', route: '/s' });
+  assert.equal(minimal.session_scoped, false);
+});
+
+test('CompanionPanelEntry: missing route fails; .strict rejects extras', () => {
+  assert.throws(() =>
+    CompanionPanelEntrySchema.parse({ id: 's', title: 'S' }),
+  );
+  assert.throws(() =>
+    CompanionPanelEntrySchema.parse({ id: 's', title: 'S', route: '/s', bogus: 1 }),
+  );
+});
+
+test('ContextSelector: all four kinds parse; unknown kind fails', () => {
+  assert.equal(ContextSelectorSchema.parse({ kind: 'file' }).kind, 'file');
+  assert.equal(
+    ContextSelectorSchema.parse({ kind: 'file', glob: '*.md' }).glob,
+    '*.md',
+  );
+  assert.equal(ContextSelectorSchema.parse({ kind: 'artifact' }).kind, 'artifact');
+  assert.equal(ContextSelectorSchema.parse({ kind: 'session' }).kind, 'session');
+  const n = ContextSelectorSchema.parse({ kind: 'ngwa-item', kinds: ['task'] });
+  assert.equal(n.kind, 'ngwa-item');
+  assert.throws(() => ContextSelectorSchema.parse({ kind: 'project' }));
+});
+
+test('ContextActionRun: dispatch + view variants parse; unknown kind fails', () => {
+  const d = ContextActionRunSchema.parse({
+    kind: 'dispatch',
+    prompt: 'Review {{file.path}}',
+    target: 'chi',
+  });
+  assert.equal(d.kind, 'dispatch');
+  const dMinimal = ContextActionRunSchema.parse({ kind: 'dispatch', prompt: 'p' });
+  assert.equal(dMinimal.target, undefined);
+  const v = ContextActionRunSchema.parse({ kind: 'view', route: '/review' });
+  assert.equal(v.kind, 'view');
+  assert.throws(() =>
+    ContextActionRunSchema.parse({ kind: 'shell', command: 'x' }),
+  );
+});
+
+test('ContextActionEntry: full shape parses; missing when/run fails; .strict rejects extras', () => {
+  const a = ContextActionEntrySchema.parse({
+    id: 'hand-to-chi',
+    label: 'Hand to Chi',
+    when: { kind: 'file', glob: '*.md' },
+    run: { kind: 'dispatch', prompt: 'Handle {{file.path}}' },
+  });
+  assert.equal(a.id, 'hand-to-chi');
+  assert.throws(() =>
+    ContextActionEntrySchema.parse({
+      id: 'x',
+      label: 'X',
+      run: { kind: 'view', route: '/x' },
+    }),
+  );
+  assert.throws(() =>
+    ContextActionEntrySchema.parse({
+      id: 'x',
+      label: 'X',
+      when: { kind: 'session' },
+      run: { kind: 'view', route: '/x' },
+      bogus: true,
+    }),
+  );
+});
+
+test('WidgetEntry: span defaults medium; small|medium|wide parse; other spans fail', () => {
+  const w = WidgetEntrySchema.parse({ id: 'w', title: 'W', route: '/w' });
+  assert.equal(w.span, 'medium');
+  for (const span of ['small', 'medium', 'wide'] as const) {
+    assert.equal(
+      WidgetEntrySchema.parse({ id: 'w', title: 'W', route: '/w', span }).span,
+      span,
+    );
+  }
+  assert.throws(() =>
+    WidgetEntrySchema.parse({ id: 'w', title: 'W', route: '/w', span: 'large' }),
+  );
+  assert.throws(() =>
+    WidgetEntrySchema.parse({ id: 'w', title: 'W', route: '/w', bogus: 1 }),
+  );
+});
+
+test('Manifest v5: ui gains all five contribution blocks with [] defaults', () => {
+  const m = ManifestSchema.parse({ ...BASE, ikenga_api: '5' });
+  assert.deepEqual(m.ui.views, []);
+  assert.deepEqual(m.ui.explorer_sections, []);
+  assert.deepEqual(m.ui.companion_panels, []);
+  assert.deepEqual(m.ui.context_actions, []);
+  assert.deepEqual(m.ui.widgets, []);
+});
+
+test('Manifest v5: ui.side_pane_viewers fails to parse (DEC-34 Q1 hard-retire)', () => {
+  assert.throws(() =>
+    ManifestSchema.parse({
+      ...BASE,
+      ui: {
+        routes: [{ path: '/v', kind: 'iframe', source: 'v.html' }],
+        side_pane_viewers: [{ id: 'v', label: 'V', route: '/v' }],
+      },
+    }),
+  );
+  // Even an empty array is a declaration — the field itself is retired.
+  assert.throws(() =>
+    ManifestSchema.parse({ ...BASE, ui: { side_pane_viewers: [] } }),
+  );
+});
+
+test('Manifest v5: views[].route not in ui.routes[] fails via superRefine, naming the path', () => {
+  const r = ManifestSchema.safeParse({
+    ...BASE,
+    ui: {
+      routes: [{ path: '/grid', kind: 'iframe', source: 'grid.html' }],
+      views: [
+        { id: 'grid', title: 'Grid', route: '/grid' },
+        { id: 'missing', title: 'Missing', route: '/not-declared' },
+      ],
+    },
+  });
+  assert.equal(r.success, false);
+  if (!r.success) {
+    const issue = r.error.issues.find((i) => i.code === 'custom');
+    assert.ok(issue, 'expected a custom (superRefine) issue');
+    assert.deepEqual(issue.path, ['ui', 'views', 1, 'route']);
+    assert.ok(issue.message.includes('/not-declared'));
+  }
+});
+
+test('Manifest v5: views[] referencing every declared route parses (§2b)', () => {
+  const m = ManifestSchema.parse({
+    ...BASE,
+    ui: {
+      routes: [
+        { path: '/a', kind: 'iframe', source: 'a.html' },
+        { path: '/b', kind: 'iframe', source: 'b.html' },
+      ],
+      views: [
+        { id: 'a', title: 'A', route: '/a', pin_on_install: true },
+        { id: 'b', title: 'B', route: '/b' },
+      ],
+    },
+  });
+  assert.equal(m.ui.views.length, 2);
+  assert.equal(m.ui.views[0]?.pin_on_install, true);
+});
+
+test('Manifest v5: companion-panel and widget routes are NOT reference-checked (§2b scopes to views)', () => {
+  const m = ManifestSchema.parse({
+    ...BASE,
+    ui: {
+      routes: [],
+      companion_panels: [{ id: 'p', title: 'P', route: '/unlisted' }],
+      widgets: [{ id: 'w', title: 'W', route: '/also-unlisted' }],
+    },
+  });
+  assert.equal(m.ui.companion_panels.length, 1);
+  assert.equal(m.ui.widgets.length, 1);
+});
+
+test('Manifest v5 alias: ui.nav-only manifest parses; nav kept, views default []', () => {
+  const m = ManifestSchema.parse({
+    ...BASE,
+    ikenga_api: '1',
+    ui: {
+      routes: [{ path: '/home', kind: 'iframe', source: 'home.html' }],
+      nav: [{ id: 'home', label: 'Home', icon: 'home', route: '/home' }],
+    },
+  });
+  assert.equal(m.ui.nav.length, 1);
+  assert.equal(m.ui.nav[0]?.label, 'Home');
+  assert.deepEqual(m.ui.views, []);
+});
+
+test('Manifest v5 alias: nav + views both declared still parses (§4 — nav ignored shell-side)', () => {
+  const m = ManifestSchema.parse({
+    ...BASE,
+    ui: {
+      routes: [{ path: '/grid', kind: 'iframe', source: 'grid.html' }],
+      nav: [{ id: 'legacy', label: 'Legacy', route: '/grid' }],
+      views: [{ id: 'grid', title: 'Grid', route: '/grid' }],
+    },
+  });
+  assert.equal(m.ui.nav.length, 1);
+  assert.equal(m.ui.views.length, 1);
+});
+
+// ─── WP-27 — manifest-v5 fixture sweep (PRODUCES: src/__fixtures__/manifest-v5) ─
+// Verdict-by-folder contract consumed by WP-28's Rust parity test:
+//   valid/ parses · invalid/ fails · alias/ parses (shell applies the §4 mapping).
+
+const V5_FIXTURES = new URL('./__fixtures__/manifest-v5/', import.meta.url);
+
+function fixtureNames(dir: 'valid' | 'invalid' | 'alias'): string[] {
+  return readdirSync(new URL(`${dir}/`, V5_FIXTURES))
+    .filter((f) => f.endsWith('.json'))
+    .sort();
+}
+
+function readFixture(dir: 'valid' | 'invalid' | 'alias', name: string): unknown {
+  return JSON.parse(readFileSync(new URL(`${dir}/${name}`, V5_FIXTURES), 'utf8'));
+}
+
+test('manifest-v5 fixtures: every valid/* parses', () => {
+  const names = fixtureNames('valid');
+  assert.ok(names.length > 0, 'expected at least one valid fixture');
+  for (const name of names) {
+    const r = ManifestSchema.safeParse(readFixture('valid', name));
+    assert.ok(
+      r.success,
+      `valid/${name} should parse: ${r.success ? '' : JSON.stringify(r.error.issues)}`,
+    );
+  }
+});
+
+test('manifest-v5 fixtures: every invalid/* fails to parse', () => {
+  const names = fixtureNames('invalid');
+  assert.ok(names.length > 0, 'expected at least one invalid fixture');
+  for (const name of names) {
+    const r = ManifestSchema.safeParse(readFixture('invalid', name));
+    assert.equal(r.success, false, `invalid/${name} should fail to parse`);
+  }
+});
+
+test('manifest-v5 fixtures: every alias/* parses (nav→views is shell-side, §4)', () => {
+  const names = fixtureNames('alias');
+  assert.ok(names.length > 0, 'expected at least one alias fixture');
+  for (const name of names) {
+    const r = ManifestSchema.safeParse(readFixture('alias', name));
+    assert.ok(
+      r.success,
+      `alias/${name} should parse: ${r.success ? '' : JSON.stringify(r.error.issues)}`,
+    );
+  }
+});
+
+test('manifest-v5 fixtures: alias/nav-only keeps nav populated for the shell-side mapping', () => {
+  const m = ManifestSchema.parse(readFixture('alias', 'nav-only.json'));
+  assert.equal(m.ui.nav.length, 2);
+  assert.equal(m.ui.nav[0]?.route, '/home');
+  assert.deepEqual(m.ui.views, []);
 });

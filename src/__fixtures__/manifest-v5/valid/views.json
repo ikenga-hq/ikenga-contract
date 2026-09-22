@@ -1,0 +1,26 @@
+{
+  "id": "com.ikenga.views-demo",
+  "name": "Views Demo",
+  "version": "1.0.0",
+  "ikenga_api": "5",
+  "ui": {
+    "routes": [
+      { "path": "/grid", "kind": "iframe", "source": "grid.html" },
+      { "path": "/detail", "kind": "iframe", "source": "detail.html" }
+    ],
+    "views": [
+      {
+        "id": "grid",
+        "title": "Grid",
+        "icon": "layout-grid",
+        "route": "/grid",
+        "pin_on_install": true
+      },
+      {
+        "id": "detail",
+        "title": "Detail",
+        "route": "/detail"
+      }
+    ]
+  }
+}

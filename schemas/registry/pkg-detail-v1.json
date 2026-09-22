@@ -53,6 +53,23 @@
                     "type": "string",
                     "pattern": "^\\d+$"
                   },
+                  "auth_bridge": {
+                    "type": "object",
+                    "properties": {
+                      "strategy": {
+                        "type": "string",
+                        "enum": [
+                          "api-key",
+                          "cdp",
+                          "none"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "strategy"
+                    ],
+                    "additionalProperties": false
+                  },
                   "kind": {
                     "type": "string"
                   },
@@ -77,15 +94,6 @@
                       "type": "string"
                     },
                     "default": []
-                  },
-                  "skills": {
-                    "type": "string"
-                  },
-                  "commands": {
-                    "type": "string"
-                  },
-                  "agents": {
-                    "type": "string"
                   },
                   "mcp": {
                     "type": "array",
@@ -118,6 +126,17 @@
                             "per-call",
                             "long-lived"
                           ]
+                        },
+                        "restart_when_changed": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "default": []
+                        },
+                        "auto_restart": {
+                          "type": "boolean",
+                          "default": true
                         }
                       },
                       "required": [
@@ -142,6 +161,17 @@
                         "stdio": {
                           "type": "string",
                           "default": "json"
+                        },
+                        "restart_when_changed": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "default": []
+                        },
+                        "auto_restart": {
+                          "type": "boolean",
+                          "default": true
                         }
                       },
                       "required": [
@@ -183,6 +213,13 @@
                         },
                         "default": []
                       },
+                      "sqlite.tables": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "default": []
+                      },
                       "supabase.tables": {
                         "type": "array",
                         "items": {
@@ -191,6 +228,27 @@
                         "default": []
                       },
                       "vault.keys": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "default": []
+                      },
+                      "engine": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "default": []
+                      },
+                      "notify": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "default": []
+                      },
+                      "events": {
                         "type": "array",
                         "items": {
                           "type": "string"
@@ -229,6 +287,9 @@
                             },
                             "default": {},
                             "description": {
+                              "type": "string"
+                            },
+                            "env": {
                               "type": "string"
                             }
                           },
@@ -289,10 +350,14 @@
                               "type": "string",
                               "enum": [
                                 "iframe",
-                                "component"
+                                "component",
+                                "webview"
                               ]
                             },
                             "source": {
+                              "type": "string"
+                            },
+                            "partition": {
                               "type": "string"
                             }
                           },
@@ -330,6 +395,101 @@
                         "default": []
                       },
                       "side_pane_viewers": {
+                        "not": {}
+                      },
+                      "views": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "title": {
+                              "type": "string"
+                            },
+                            "icon": {
+                              "type": "string"
+                            },
+                            "route": {
+                              "type": "string"
+                            },
+                            "pin_on_install": {
+                              "type": "boolean",
+                              "default": false
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "title",
+                            "route"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "default": []
+                      },
+                      "explorer_sections": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "title": {
+                              "type": "string"
+                            },
+                            "icon": {
+                              "type": "string"
+                            },
+                            "order": {
+                              "type": "integer"
+                            },
+                            "data_route": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "title",
+                            "data_route"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "default": []
+                      },
+                      "companion_panels": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "title": {
+                              "type": "string"
+                            },
+                            "icon": {
+                              "type": "string"
+                            },
+                            "route": {
+                              "type": "string"
+                            },
+                            "session_scoped": {
+                              "type": "boolean",
+                              "default": false
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "title",
+                            "route"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "default": []
+                      },
+                      "context_actions": {
                         "type": "array",
                         "items": {
                           "type": "object",
@@ -340,13 +500,150 @@
                             "label": {
                               "type": "string"
                             },
-                            "route": {
-                              "type": "string"
+                            "when": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "file"
+                                    },
+                                    "glob": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "artifact"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "session"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "ngwa-item"
+                                    },
+                                    "kinds": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "kind"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            "run": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "dispatch"
+                                    },
+                                    "prompt": {
+                                      "type": "string"
+                                    },
+                                    "target": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "prompt"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "view"
+                                    },
+                                    "route": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "route"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
                             }
                           },
                           "required": [
                             "id",
                             "label",
+                            "when",
+                            "run"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "default": []
+                      },
+                      "widgets": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "title": {
+                              "type": "string"
+                            },
+                            "route": {
+                              "type": "string"
+                            },
+                            "span": {
+                              "type": "string",
+                              "enum": [
+                                "small",
+                                "medium",
+                                "wide"
+                              ],
+                              "default": "medium"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "title",
                             "route"
                           ],
                           "additionalProperties": false
@@ -370,6 +667,23 @@
                             "type": "string"
                           }
                         }
+                      },
+                      "session": {
+                        "type": "object",
+                        "properties": {
+                          "persistence": {
+                            "type": "string",
+                            "enum": [
+                              "keep",
+                              "clear-on-exit",
+                              "ask"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "persistence"
+                        ],
+                        "additionalProperties": false
                       }
                     },
                     "additionalProperties": false,
@@ -495,6 +809,139 @@
                     },
                     "additionalProperties": false
                   },
+                  "capabilities": {
+                    "type": "object",
+                    "properties": {
+                      "supabase": {
+                        "type": "object",
+                        "properties": {
+                          "required": {
+                            "type": "boolean",
+                            "default": false
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "sqlite": {
+                        "anyOf": [
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "db": {
+                                "type": "string",
+                                "default": "ikenga.local"
+                              }
+                            },
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "webview": {
+                        "type": "object",
+                        "properties": {
+                          "child_webviews": {
+                            "type": "boolean",
+                            "default": false
+                          },
+                          "partitions": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "default": []
+                          },
+                          "engines": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "webkit",
+                                "chrome"
+                              ]
+                            },
+                            "default": [
+                              "webkit"
+                            ]
+                          },
+                          "allowed_origins": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "agentOps": {
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": false
+                      },
+                      "http": {
+                        "type": "object",
+                        "properties": {
+                          "auth_secret": {
+                            "type": "string"
+                          },
+                          "auth_header": {
+                            "type": "string",
+                            "default": "Authorization"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "secrets": {
+                        "type": "object",
+                        "properties": {
+                          "declarations": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "name": {
+                                  "type": "string"
+                                },
+                                "vault_key": {
+                                  "type": "string"
+                                },
+                                "required": {
+                                  "type": "boolean",
+                                  "default": false
+                                },
+                                "format": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "name",
+                                "vault_key"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "default": []
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "invoke": {
+                        "type": "object",
+                        "properties": {
+                          "commands": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "default": []
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "additionalProperties": false
+                  },
                   "engine": {
                     "type": "object",
                     "properties": {
@@ -598,6 +1045,60 @@
                       "capabilities"
                     ],
                     "additionalProperties": false
+                  },
+                  "screenshots": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "path": {
+                          "type": "string"
+                        },
+                        "caption": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "path"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "default": []
+                  },
+                  "requires": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "git",
+                            "npx",
+                            "catalog",
+                            "local"
+                          ]
+                        },
+                        "ref": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "name"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "default": []
+                  },
+                  "signature": {
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -623,6 +1124,26 @@
                   "required": [
                     "name",
                     "range"
+                  ],
+                  "additionalProperties": false
+                },
+                "default": []
+              },
+              "screenshots": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "caption": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "url"
                   ],
                   "additionalProperties": false
                 },

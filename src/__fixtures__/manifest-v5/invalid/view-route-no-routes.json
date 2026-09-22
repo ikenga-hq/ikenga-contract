@@ -1,0 +1,11 @@
+{
+  "id": "com.ikenga.no-routes",
+  "name": "No Routes",
+  "version": "1.0.0",
+  "ikenga_api": "5",
+  "ui": {
+    "views": [
+      { "id": "orphan", "title": "Orphan", "route": "/orphan" }
+    ]
+  }
+}
