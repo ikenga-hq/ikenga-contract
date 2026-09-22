@@ -240,10 +240,15 @@ export const UiBlockSchema = z.object({
   command_palette: z.array(CommandPaletteEntrySchema).default([]),
   /** v5 hard-retire (G-MANIFEST-V5 §8 Q1 / DEC-34): `side_pane_viewers` was
    *  removed from the block; declaring it fails validation outright.
-   *  `z.never()` is the contract-side mirror of the Rust canonical rejection
+   *  `z.never()` carries the same canonical message as the Rust rejection
    *  (skills/commands-bundling precedent). `SidePaneViewerSchema` stays
    *  exported for tooling that reads historical manifests. */
-  side_pane_viewers: z.never().optional(),
+  side_pane_viewers: z
+    .never({
+      message:
+        '`ui.side_pane_viewers` was removed in manifest v5 (G-MANIFEST-V5 §8 Q1) — declare `ui.views[]` or `ui.companion_panels[]` instead',
+    })
+    .optional(),
   // ── v5 contribution blocks (G-MANIFEST-V5 §2; all optional-with-default) ──
   views: z.array(ViewEntrySchema).default([]),
   explorer_sections: z.array(ExplorerSectionEntrySchema).default([]),
