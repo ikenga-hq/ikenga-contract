@@ -470,6 +470,7 @@ test('Manifest v5: ui.side_pane_viewers fails to parse (DEC-34 Q1 hard-retire)',
         side_pane_viewers: [{ id: 'v', label: 'V', route: '/v' }],
       },
     }),
+    /was removed in manifest v5 \(G-MANIFEST-V5 §8 Q1\)/,
   );
   // Even an empty array is a declaration — the field itself is retired.
   assert.throws(() =>
