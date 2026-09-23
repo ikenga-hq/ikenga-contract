@@ -7,8 +7,8 @@
     "routes": [
       { "path": "/home", "kind": "iframe", "source": "home.html" }
     ],
-    "nav": [
-      { "id": "home", "label": "Home", "icon": "home", "route": "/home" }
+    "views": [
+      { "id": "home", "title": "Home", "icon": "home", "route": "/home" }
     ],
     "command_palette": [
       { "id": "sync", "label": "Sync", "shortcut": "ctrl+shift+s", "action": "sync.now" }

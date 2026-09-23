@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 
 import {
   CompanionPanelEntrySchema,
@@ -531,8 +531,11 @@ test('Manifest v5: companion-panel and widget routes are NOT reference-checked (
   assert.equal(m.ui.widgets.length, 1);
 });
 
-test('Manifest v5 alias: ui.nav-only manifest parses; nav kept, views default []', () => {
-  const m = ManifestSchema.parse({
+const NAV_REMOVED_MESSAGE =
+  '`ui.nav` was removed in manifest v5 (G-MANIFEST-V5 §4 / DEC-37) — declare `ui.views[]` instead';
+
+test('DEC-37: ui.nav-only manifest is rejected with the canonical message', () => {
+  const r = ManifestSchema.safeParse({
     ...BASE,
     ikenga_api: '1',
     ui: {
@@ -540,13 +543,15 @@ test('Manifest v5 alias: ui.nav-only manifest parses; nav kept, views default []
       nav: [{ id: 'home', label: 'Home', icon: 'home', route: '/home' }],
     },
   });
-  assert.equal(m.ui.nav.length, 1);
-  assert.equal(m.ui.nav[0]?.label, 'Home');
-  assert.deepEqual(m.ui.views, []);
+  assert.equal(r.success, false);
+  assert.ok(
+    r.success === false && r.error.issues.some((i) => i.message === NAV_REMOVED_MESSAGE),
+    `expected canonical ui.nav message, got ${r.success ? '' : JSON.stringify(r.error.issues)}`,
+  );
 });
 
-test('Manifest v5 alias: nav + views both declared still parses (§4 — nav ignored shell-side)', () => {
-  const m = ManifestSchema.parse({
+test('DEC-37: nav + views both declared is rejected (no "views win" precedence)', () => {
+  const r = ManifestSchema.safeParse({
     ...BASE,
     ui: {
       routes: [{ path: '/grid', kind: 'iframe', source: 'grid.html' }],
@@ -554,23 +559,39 @@ test('Manifest v5 alias: nav + views both declared still parses (§4 — nav ign
       views: [{ id: 'grid', title: 'Grid', route: '/grid' }],
     },
   });
-  assert.equal(m.ui.nav.length, 1);
+  assert.equal(r.success, false);
+  assert.ok(
+    r.success === false && r.error.issues.some((i) => i.message === NAV_REMOVED_MESSAGE),
+    'expected canonical ui.nav message',
+  );
+});
+
+test('DEC-37: a manifest with no ui.nav at all still parses', () => {
+  const m = ManifestSchema.parse({
+    ...BASE,
+    ui: {
+      routes: [{ path: '/grid', kind: 'iframe', source: 'grid.html' }],
+      views: [{ id: 'grid', title: 'Grid', route: '/grid' }],
+    },
+  });
   assert.equal(m.ui.views.length, 1);
 });
 
 // ─── WP-27 — manifest-v5 fixture sweep (PRODUCES: src/__fixtures__/manifest-v5) ─
 // Verdict-by-folder contract consumed by WP-28's Rust parity test:
-//   valid/ parses · invalid/ fails · alias/ parses (shell applies the §4 mapping).
+//   valid/ parses · invalid/ fails.
+// The former alias/ folder was retired by DEC-37 (§4 cutover); its fixtures
+// moved into invalid/.
 
 const V5_FIXTURES = new URL('./__fixtures__/manifest-v5/', import.meta.url);
 
-function fixtureNames(dir: 'valid' | 'invalid' | 'alias'): string[] {
+function fixtureNames(dir: 'valid' | 'invalid'): string[] {
   return readdirSync(new URL(`${dir}/`, V5_FIXTURES))
     .filter((f) => f.endsWith('.json'))
     .sort();
 }
 
-function readFixture(dir: 'valid' | 'invalid' | 'alias', name: string): unknown {
+function readFixture(dir: 'valid' | 'invalid', name: string): unknown {
   return JSON.parse(readFileSync(new URL(`${dir}/${name}`, V5_FIXTURES), 'utf8'));
 }
 
@@ -595,23 +616,26 @@ test('manifest-v5 fixtures: every invalid/* fails to parse', () => {
   }
 });
 
-test('manifest-v5 fixtures: every alias/* parses (nav→views is shell-side, §4)', () => {
-  const names = fixtureNames('alias');
-  assert.ok(names.length > 0, 'expected at least one alias fixture');
-  for (const name of names) {
-    const r = ManifestSchema.safeParse(readFixture('alias', name));
-    assert.ok(
-      r.success,
-      `alias/${name} should parse: ${r.success ? '' : JSON.stringify(r.error.issues)}`,
-    );
-  }
+test('manifest-v5 fixtures: invalid/nav-only fails with the canonical ui.nav message (DEC-37)', () => {
+  const r = ManifestSchema.safeParse(readFixture('invalid', 'nav-only.json'));
+  assert.equal(r.success, false);
+  assert.ok(
+    r.success === false && r.error.issues.some((i) => i.message === NAV_REMOVED_MESSAGE),
+    'expected canonical ui.nav message',
+  );
 });
 
-test('manifest-v5 fixtures: alias/nav-only keeps nav populated for the shell-side mapping', () => {
-  const m = ManifestSchema.parse(readFixture('alias', 'nav-only.json'));
-  assert.equal(m.ui.nav.length, 2);
-  assert.equal(m.ui.nav[0]?.route, '/home');
-  assert.deepEqual(m.ui.views, []);
+test('manifest-v5 fixtures: invalid/nav-and-views fails with the canonical ui.nav message (DEC-37)', () => {
+  const r = ManifestSchema.safeParse(readFixture('invalid', 'nav-and-views.json'));
+  assert.equal(r.success, false);
+  assert.ok(
+    r.success === false && r.error.issues.some((i) => i.message === NAV_REMOVED_MESSAGE),
+    'expected canonical ui.nav message',
+  );
+});
+
+test('manifest-v5 fixtures: the retired alias/ folder is gone (DEC-37 §4 cutover)', () => {
+  assert.equal(existsSync(new URL('alias/', V5_FIXTURES)), false);
 });
 
 // ─── WP-31 — workflows[] manifest field (DEC-41) ────────────────────────────
