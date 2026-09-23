@@ -638,6 +638,21 @@ test('manifest-v5 fixtures: the retired alias/ folder is gone (DEC-37 §4 cutove
   assert.equal(existsSync(new URL('alias/', V5_FIXTURES)), false);
 });
 
+// ─── G-44 — workflows[] fixtures ────────────────────────────────────────────
+test('manifest-v5 fixtures: invalid/workflows-bad-handler fails at workflows[0].steps[N].handler', () => {
+  const r = ManifestSchema.safeParse(readFixture('invalid', 'workflows-bad-handler.json'));
+  assert.equal(r.success, false);
+  assert.ok(
+    r.success === false &&
+      r.error.issues.some(
+        (i) => i.path.join('.') === 'workflows.0.steps.0.handler',
+      ),
+    `expected an issue at workflows.0.steps.0.handler, got ${
+      r.success ? '' : JSON.stringify(r.error.issues.map((i) => i.path.join('.')))
+    }`,
+  );
+});
+
 // ─── WP-31 — workflows[] manifest field (DEC-41) ────────────────────────────
 
 test('WorkflowStepSchema: valid step parses with defaults', () => {

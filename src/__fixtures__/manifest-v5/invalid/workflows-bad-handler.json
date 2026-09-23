@@ -1,0 +1,22 @@
+{
+  "id": "com.ikenga.workflows-bad-handler",
+  "name": "Workflows Bad Handler",
+  "version": "1.0.0",
+  "ikenga_api": "5",
+  "workflows": [
+    {
+      "id": "release",
+      "title": "Release",
+      "steps": [
+        {
+          "id": "prep",
+          "title": "Prepare release",
+          "handler": "/iyke/pkg/com.ikenga.workflows-bad-handler/Prep_Step",
+          "inputs": {},
+          "produces": [],
+          "depends_on": []
+        }
+      ]
+    }
+  ]
+}
