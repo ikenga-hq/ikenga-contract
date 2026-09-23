@@ -492,6 +492,58 @@ export const ManifestAuthBridgeSchema = z.object({
 });
 export type ManifestAuthBridge = z.infer<typeof ManifestAuthBridgeSchema>;
 
+// ── workflows[] — workflow declarations a pkg contributes (DEC-41, Round 27) ─
+export const WorkflowStepSchema = z
+  .object({
+    id: z.string(), // unique within this workflow's steps[]
+    title: z.string(),
+    /** Bridge address of the handler (DEC-41). Written `/iyke/pkg/<pkg_id>/<cmd>`:
+     *  the `/iyke` prefix is a namespace marker, never sent on the wire — it
+     *  names the bridge and disambiguates from the identically-spelled pane
+     *  route `/pkg/<id><path>`; the runner strips it and invokes
+     *  `POST {bridge}/pkg/<pkg_id>/<cmd>` — the path the pkg registered in
+     *  `iyke.routes[]` and the `/pkg/*` dispatcher serves. `<pkg_id>` must equal
+     *  this manifest's `id` (a pkg can only register routes under its own
+     *  namespace — `IykeRoutesRegistry::validate_path`), so a foreign id is
+     *  unresolvable; the stripped path must appear in `iyke.routes[]` with
+     *  `method: "POST"`.
+     *  `<cmd>` segments are restricted to lowercase-dash — a deliberate
+     *  constraint: `iyke.routes[].path` itself is unconstrained, but only
+     *  routes spelled with these segments are workflow-addressable. */
+    handler: z
+      .string()
+      .regex(
+        /^\/iyke\/pkg\/[a-z0-9]+(\.[a-z0-9-]+)+\/[a-z0-9][a-z0-9-]*(\/[a-z0-9][a-z0-9-]*)*$/,
+        'must be /iyke/pkg/<pkg_id>/<cmd>',
+      ),
+    /** JSON Schema object describing the inputs the handler accepts — carried
+     *  verbatim and opaque to the parser (the runner validates invocations
+     *  against it). A `z.record`, not a schema DSL: §6's no-new-authoring-format
+     *  rule applies to step inputs too. */
+    inputs: z.record(z.unknown()).default({}),
+    /** Names of the outputs the step emits — artifacts/keys downstream steps
+     *  and the Automations listing can reference. A flat name list, not a type
+     *  system; array (not single string) because a step can emit several. */
+    produces: z.array(z.string()).default([]),
+    /** Ids of sibling steps in THIS workflow that must complete first — maps to
+     *  §6 `depends-on` edges. `parallel`/`triggers` are not manifest-declared:
+     *  parallelism is implicit in the DAG, and `triggers` belongs to the
+     *  imported graphs that reference these steps. */
+    depends_on: z.array(z.string()).default([]),
+  })
+  .strict();
+
+export const WorkflowEntrySchema = z
+  .object({
+    id: z.string(), // pkg-local; imported graph id `${pkg_id}:${id}`
+    title: z.string(),
+    steps: z.array(WorkflowStepSchema).min(1),
+  })
+  .strict();
+
+export type WorkflowStep = z.infer<typeof WorkflowStepSchema>;
+export type WorkflowEntry = z.infer<typeof WorkflowEntrySchema>;
+
 // ---------- Manifest ----------
 
 export const ManifestSchema = z.object({
@@ -514,10 +566,11 @@ export const ManifestSchema = z.object({
   // NOTE (WP-17, ADR-015 decision 4): the `skills`/`commands`/`agents`
   // asset-bundling fields were HARD-RETIRED (lockstep with the Rust
   // `Manifest`). A pkg no longer embeds Claude-config assets; it only
-  // `requires` standalone Ọba primitives. The schema is `.strict()`, so a
-  // manifest still declaring any of them now FAILS validation (no deprecation
-  // window). The shell builtin `com.ikenga.iyke` places its skill/commands by
-  // convention from on-disk folders, not via a manifest field.
+  // `requires` standalone Ọba primitives. The Rust parser enforces
+  // `deny_unknown_fields` (so declaring any of them fails kernel validation);
+  // the Zod schema dropped the fields from the Manifest type. The shell builtin
+  // `com.ikenga.iyke` places its skill/commands by convention from on-disk
+  // folders, not via a manifest field.
   mcp: z.array(McpServerSchema).default([]),
   sidecars: z.array(SidecarSpecSchema).default([]),
   permissions: PermissionsSchema,
@@ -528,6 +581,7 @@ export const ManifestSchema = z.object({
   cron: z.array(CronEntrySchema).default([]),
   window: WindowBlockSchema.optional(),
   queries: QueriesBlockSchema.optional(),
+  workflows: z.array(WorkflowEntrySchema).default([]),
 
   /** Optional capabilities the host resolves and injects at iframe-mount
    *  time via the AppBridge `hostContext` handshake. Mirrors the Rust

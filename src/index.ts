@@ -13,6 +13,7 @@ export * from './action-frontmatter.js';
 export * from './host-context.js';
 export * from './app-bridge.js';
 export * from './ngwa.js';
+export * from './workflow-graph.js';
 
 /** This package's own version. */
 export const CONTRACT_PACKAGE_VERSION = '0.19.0' as const;

@@ -75,6 +75,10 @@
     "./ngwa": {
       "types": "./dist/ngwa.d.ts",
       "import": "./dist/ngwa.js"
+    },
+    "./workflow-graph": {
+      "types": "./dist/workflow-graph.d.ts",
+      "import": "./dist/workflow-graph.js"
     }
   },
   "files": [
