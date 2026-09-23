@@ -20,6 +20,8 @@ import {
   SecretsCapabilitySchema,
   ViewEntrySchema,
   WidgetEntrySchema,
+  WorkflowEntrySchema,
+  WorkflowStepSchema,
 } from './manifest.js';
 
 // ─── WP-11 — `requires` field (ADR-015 §3) ──────────────────────────────────
@@ -611,3 +613,128 @@ test('manifest-v5 fixtures: alias/nav-only keeps nav populated for the shell-sid
   assert.equal(m.ui.nav[0]?.route, '/home');
   assert.deepEqual(m.ui.views, []);
 });
+
+// ─── WP-31 — workflows[] manifest field (DEC-41) ────────────────────────────
+
+test('WorkflowStepSchema: valid step parses with defaults', () => {
+  const step = WorkflowStepSchema.parse({
+    id: 'build',
+    title: 'Build Package',
+    handler: '/iyke/pkg/com.ikenga.build/compile',
+  });
+  assert.equal(step.id, 'build');
+  assert.equal(step.title, 'Build Package');
+  assert.equal(step.handler, '/iyke/pkg/com.ikenga.build/compile');
+  assert.deepEqual(step.inputs, {});
+  assert.deepEqual(step.produces, []);
+  assert.deepEqual(step.depends_on, []);
+});
+
+test('WorkflowStepSchema: validates handler route regex (DEC-41)', () => {
+  // Valid handler routes
+  assert.ok(
+    WorkflowStepSchema.safeParse({
+      id: 'step1',
+      title: 'Step 1',
+      handler: '/iyke/pkg/com.ikenga.build/run',
+    }).success,
+  );
+  assert.ok(
+    WorkflowStepSchema.safeParse({
+      id: 'step2',
+      title: 'Step 2',
+      handler: '/iyke/pkg/com.ikenga.studio/sub-cmd/nested',
+    }).success,
+  );
+
+  // Invalid: missing /iyke prefix
+  assert.equal(
+    WorkflowStepSchema.safeParse({
+      id: 'step1',
+      title: 'Step 1',
+      handler: '/pkg/com.ikenga.build/run',
+    }).success,
+    false,
+  );
+
+  // Invalid: uppercase characters in handler
+  assert.equal(
+    WorkflowStepSchema.safeParse({
+      id: 'step1',
+      title: 'Step 1',
+      handler: '/iyke/pkg/com.ikenga.Build/Run',
+    }).success,
+    false,
+  );
+
+  // Invalid: extra unknown fields rejected (.strict)
+  assert.equal(
+    WorkflowStepSchema.safeParse({
+      id: 'step1',
+      title: 'Step 1',
+      handler: '/iyke/pkg/com.ikenga.build/run',
+      extra: true,
+    }).success,
+    false,
+  );
+});
+
+test('WorkflowEntrySchema: parses workflow with steps and requires min 1 step', () => {
+  const entry = WorkflowEntrySchema.parse({
+    id: 'ci',
+    title: 'CI Pipeline',
+    steps: [
+      {
+        id: 'test',
+        title: 'Run Tests',
+        handler: '/iyke/pkg/com.ikenga.test/unit',
+        produces: ['coverage.json'],
+      },
+      {
+        id: 'deploy',
+        title: 'Deploy',
+        handler: '/iyke/pkg/com.ikenga.deploy/stage',
+        depends_on: ['test'],
+      },
+    ],
+  });
+  assert.equal(entry.id, 'ci');
+  assert.equal(entry.steps.length, 2);
+
+  // Rejects empty steps
+  assert.equal(
+    WorkflowEntrySchema.safeParse({
+      id: 'empty',
+      title: 'Empty Workflow',
+      steps: [],
+    }).success,
+    false,
+  );
+});
+
+test('Manifest: workflows[] defaults to [] when omitted and round-trips when declared', () => {
+  const m1 = ManifestSchema.parse({ ...BASE, ikenga_api: '5' });
+  assert.deepEqual(m1.workflows, []);
+
+  const m2 = ManifestSchema.parse({
+    ...BASE,
+    ikenga_api: '5',
+    workflows: [
+      {
+        id: 'build-and-test',
+        title: 'Build and Test',
+        steps: [
+          {
+            id: 'build',
+            title: 'Build',
+            handler: '/iyke/pkg/com.ikenga.studio/build',
+          },
+        ],
+      },
+    ],
+  });
+  assert.equal(m2.workflows.length, 1);
+  assert.equal(m2.workflows[0]?.id, 'build-and-test');
+  assert.equal(m2.workflows[0]?.steps[0]?.handler, '/iyke/pkg/com.ikenga.studio/build');
+});
+
