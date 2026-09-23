@@ -1,0 +1,44 @@
+{
+  "id": "com.ikenga.workflows-multi",
+  "name": "Workflows Multi",
+  "version": "1.0.0",
+  "ikenga_api": "5",
+  "workflows": [
+    {
+      "id": "ingest",
+      "title": "Ingest",
+      "steps": [
+        {
+          "id": "fetch",
+          "title": "Fetch source",
+          "handler": "/iyke/pkg/com.ikenga.workflows-multi/fetch",
+          "inputs": { "url": { "type": "string" } },
+          "produces": ["raw-file"],
+          "depends_on": []
+        }
+      ]
+    },
+    {
+      "id": "export",
+      "title": "Export",
+      "steps": [
+        {
+          "id": "render",
+          "title": "Render output",
+          "handler": "/iyke/pkg/com.ikenga.workflows-multi/render",
+          "inputs": {},
+          "produces": ["rendered-file"],
+          "depends_on": []
+        },
+        {
+          "id": "upload",
+          "title": "Upload output",
+          "handler": "/iyke/pkg/com.ikenga.workflows-multi/upload",
+          "inputs": {},
+          "produces": ["upload-receipt"],
+          "depends_on": ["render"]
+        }
+      ]
+    }
+  ]
+}

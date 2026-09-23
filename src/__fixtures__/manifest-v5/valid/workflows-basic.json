@@ -1,0 +1,30 @@
+{
+  "id": "com.ikenga.workflows-basic",
+  "name": "Workflows Basic",
+  "version": "1.0.0",
+  "ikenga_api": "5",
+  "workflows": [
+    {
+      "id": "release",
+      "title": "Release",
+      "steps": [
+        {
+          "id": "prep",
+          "title": "Prepare release",
+          "handler": "/iyke/pkg/com.ikenga.workflows-basic/prep",
+          "inputs": { "version": { "type": "string" } },
+          "produces": ["release-notes"],
+          "depends_on": []
+        },
+        {
+          "id": "publish",
+          "title": "Publish release",
+          "handler": "/iyke/pkg/com.ikenga.workflows-basic/publish",
+          "inputs": {},
+          "produces": ["published-url"],
+          "depends_on": ["prep"]
+        }
+      ]
+    }
+  ]
+}
