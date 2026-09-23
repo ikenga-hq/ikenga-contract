@@ -20,9 +20,9 @@ import { BrowserEngineSchema } from './browser.js';
 // v5 (WP-27, G-MANIFEST-V5 — plans/shell-ux-rearchitecture/drafts/g-manifest-v5.md,
 // frozen 2026-09-22 Round 24): added ui.views[] / ui.explorer_sections[] (+ the
 // ExplorerSectionData wire shape) / ui.companion_panels[] / ui.context_actions[] /
-// ui.widgets[]; ui.nav marked a deprecated alias (shell-side mapping, one-release
-// lifetime, §4); ui.side_pane_viewers hard-retired — declaring it now fails
-// validation. All additions are optional-with-default, so api=1..4 manifests
+// ui.widgets[]; ui.nav was a deprecated alias for one shell release (shell-side
+// mapping, §4) and is now hard-retired by DEC-37 — declaring it fails validation,
+// as does ui.side_pane_viewers (§8 Q1 / DEC-34). All additions are optional-with-default, so api=1..4 manifests
 // parse unchanged; the support window stays [MIN_SUPPORTED, CURRENT].
 export const IKENGA_API_VERSION = 5 as const;
 export const IKENGA_API_MIN_SUPPORTED = 1 as const;
@@ -135,9 +135,10 @@ export type ManifestUiSession = z.infer<typeof ManifestUiSessionSchema>;
 // (plans/shell-ux-rearchitecture/drafts/g-manifest-v5.md, frozen 2026-09-22,
 // Round 24 / DEC-34). Copied verbatim — do not reinterpret. `UiBlock` gains
 // `views`, `explorer_sections`, `companion_panels`, `context_actions`,
-// `widgets` (all optional-with-default); `nav` keeps its field and type.
+// `widgets` (all optional-with-default). `nav` kept its field and type for the
+// one-release alias window; DEC-37 closed that window and now rejects it.
 
-// ── ui.views[] — replaces ui.nav (alias window §4) ────────────────────────
+// ── ui.views[] — replaces ui.nav (alias window closed, §4 / DEC-37) ───────
 export const ViewEntrySchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -229,13 +230,17 @@ export const WidgetEntrySchema = z.object({
 export type WidgetEntry = z.infer<typeof WidgetEntrySchema>;
 
 export const UiBlockSchema = z.object({
-  /** @deprecated v5 alias (G-MANIFEST-V5 §4): the shell reads `nav[i]` as
-   *  `views[i]` = `{id, title: label, icon, route, pin_on_install: i === 0}`
-   *  for exactly one shell release, then deletes the mapping. Field and type
-   *  are unchanged; a manifest declaring both `nav` and `views` still parses
-   *  (`nav` is ignored with a shell-side warning). New manifests declare
-   *  `views` instead. */
-  nav: z.array(NavEntrySchema).default([]),
+  /** v5 hard cutover (G-MANIFEST-V5 §4 / DEC-37): the one-release `ui.nav` →
+   *  `ui.views` alias window closed with v0.12.0 (the soft-warn release), so
+   *  declaring `ui.nav` now fails validation outright. `NavEntrySchema` stays
+   *  exported for tooling that reads historical manifests, same as
+   *  `SidePaneViewerSchema`. */
+  nav: z
+    .never({
+      message:
+        '`ui.nav` was removed in manifest v5 (G-MANIFEST-V5 §4 / DEC-37) — declare `ui.views[]` instead',
+    })
+    .optional(),
   routes: z.array(UiRouteSchema).default([]),
   command_palette: z.array(CommandPaletteEntrySchema).default([]),
   /** v5 hard-retire (G-MANIFEST-V5 §8 Q1 / DEC-34): `side_pane_viewers` was
