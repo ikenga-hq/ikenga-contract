@@ -1,5 +1,15 @@
 # @ikenga/contract
 
+## 0.20.0
+
+### Minor Changes
+
+- c162628: Add `workflows[]` manifest contribution field schema per DEC-41 (§10) and `WorkflowGraph` interchange view-model schema per G-MANIFEST-V5 §6.
+
+### Patch Changes
+
+- 0937ee2: `ui.side_pane_viewers` now rejects with the same canonical message as the shell's Rust parser (G-MANIFEST-V5 §8 Q1 / DEC-34), instead of Zod's generic `never` text.
+
 ## 0.19.0
 
 ### Minor Changes
