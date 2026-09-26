@@ -32,6 +32,12 @@ import { BrowserEngineSchema } from './browser.js';
 // sits on a `.strict()` object, so a manifest declaring it is rejected by
 // every parser that predates this change, whatever `ikenga_api` it declares
 // (g-manifest-v5 §11; the same caveat class as `workflows[]`, §10).
+// EXCEPTION to the "api=1..4 manifests parse unchanged" claim above (G-ACTIONS
+// §12): an api=1..4 manifest whose `ui.command_palette[].action` was an
+// untyped value that is not a valid `dispatch`/`view` payload (e.g. the
+// bare string `"sync.now"`, or an object with unrecognised `kind`/extra keys)
+// is now rejected — `action: z.unknown()` accepted any value; the typed union
+// does not. No published manifest used this shape at the freeze (§12).
 export const IKENGA_API_VERSION = 5 as const;
 export const IKENGA_API_MIN_SUPPORTED = 1 as const;
 
@@ -227,8 +233,10 @@ export const ContextActionEntrySchema = z.object({
    *  time (G-ACTIONS §7.4); otherwise the action arrives unbound. Older
    *  shells (pre-WP-51) reject a manifest declaring this field outright,
    *  since `ContextActionEntry` is `.strict()` / `deny_unknown_fields`
-   *  (g-manifest-v5 §11). */
-  key: z.string().optional(),
+   *  (g-manifest-v5 §11). B-6: single stroke only — no whitespace, since the
+   *  registry grammar's strokes never contain it and a space is
+   *  unambiguously a chord. */
+  key: z.string().regex(/^\S+$/, 'ui.context_actions[].key must be a single stroke (no whitespace) — a chord is not a valid key request').optional(),
 }).strict();
 export type ContextActionEntry = z.infer<typeof ContextActionEntrySchema>;
 
@@ -280,8 +288,9 @@ export const CommandPaletteEntrySchema = z.object({
    *  `ContextActionEntry.key`: single stroke, grant-if-free, rebindable.
    *  Its derived `when` is always `!inputFocus`. Unlike `key`, this needs no
    *  older-shell caveat for acceptance — pre-WP-51 parsers already accept
-   *  any `action` value and simply ignore `shortcut`. */
-  shortcut: z.string().optional(),
+   *  any `action` value and simply ignore `shortcut`. B-6: single stroke
+   *  only — no whitespace, same rule as `ContextActionEntry.key`. */
+  shortcut: z.string().regex(/^\S+$/, 'ui.command_palette[].shortcut must be a single stroke (no whitespace) — a chord is not a valid key request').optional(),
   action: ContextActionRunSchema,
 }).strict();
 export type CommandPaletteEntry = z.infer<typeof CommandPaletteEntrySchema>;

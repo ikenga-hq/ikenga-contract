@@ -485,9 +485,22 @@ test('ContextActionEntry: a key request can never author "always" or an OS scope
   );
 });
 
+test('DEC-54: `when` as the bare string "always" is rejected (ContextSelector is a tagged union)', () => {
+  assert.throws(() =>
+    ContextActionEntrySchema.parse({
+      id: 'x',
+      label: 'X',
+      when: 'always',
+      run: { kind: 'view', route: '/x' },
+    }),
+  );
+});
+
 test('G-ACTIONS §7.3: deriveContextActionKeyWhen covers every ContextSelector variant', () => {
   const cases: Array<[Parameters<typeof deriveContextActionKeyWhen>[0], string]> = [
     [{ kind: 'file' }, 'filesFocus'],
+    // An empty glob is parity with the absent case (§7.3), not `resource =~ ''`.
+    [{ kind: 'file', glob: '' }, 'filesFocus'],
     [
       { kind: 'file', glob: '*.{ts,rs}' },
       "filesFocus && resource =~ '*.{ts,rs}'",
@@ -510,7 +523,6 @@ test('G-ACTIONS §7.3: deriveContextActionKeyWhen covers every ContextSelector v
     assert.equal(when, expected, `selector ${JSON.stringify(selector)}`);
     assert.notEqual(when, 'always', 'must be narrower than always');
     assert.ok(when.length > 0, 'must not be empty (empty == always)');
-    assert.ok(!when.includes('scope'), 'derived when must never encode an OS-wide scope');
   }
 });
 
@@ -523,11 +535,11 @@ test('G-ACTIONS §12 (G-70): CommandPaletteEntry.action is the typed run union',
   const p = CommandPaletteEntrySchema.parse({
     id: 'release-status',
     label: 'Release status',
-    shortcut: 'mod+k mod+r',
+    shortcut: 'mod+shift+r',
     action: { kind: 'dispatch', prompt: 'Run release-status' },
   });
   assert.equal(p.action.kind, 'dispatch');
-  assert.equal(p.shortcut, 'mod+k mod+r');
+  assert.equal(p.shortcut, 'mod+shift+r');
 
   const minimal = CommandPaletteEntrySchema.parse({
     id: 'open-review',
@@ -550,6 +562,26 @@ test('G-ACTIONS §12 (G-70): CommandPaletteEntry.action is the typed run union',
       label: 'Bad',
       action: { kind: 'view', route: '/x' },
       bogus: true,
+    }),
+  );
+});
+
+test('B-6 / G-ACTIONS §7.1, §12: a chord key/shortcut request is rejected (single stroke only)', () => {
+  assert.throws(() =>
+    ContextActionEntrySchema.parse({
+      id: 'x',
+      label: 'X',
+      when: { kind: 'file' },
+      run: { kind: 'view', route: '/x' },
+      key: 'mod+k mod+r',
+    }),
+  );
+  assert.throws(() =>
+    CommandPaletteEntrySchema.parse({
+      id: 'p',
+      label: 'P',
+      shortcut: 'mod+k mod+r',
+      action: { kind: 'view', route: '/x' },
     }),
   );
 });
@@ -768,6 +800,28 @@ test('manifest-v5 fixtures: invalid/workflows-bad-handler fails at workflows[0].
       r.success ? '' : JSON.stringify(r.error.issues.map((i) => i.path.join('.')))
     }`,
   );
+});
+
+// ─── WP-51 — G-PKG-KEY / G-ACTIONS §7, §12 fixtures ─────────────────────────
+
+test('manifest-v5 fixtures: invalid/context-action-chord-key fails (B-6, single stroke only)', () => {
+  const r = ManifestSchema.safeParse(readFixture('invalid', 'context-action-chord-key.json'));
+  assert.equal(r.success, false);
+});
+
+test('manifest-v5 fixtures: invalid/palette-chord-shortcut fails (B-6, single stroke only)', () => {
+  const r = ManifestSchema.safeParse(readFixture('invalid', 'palette-chord-shortcut.json'));
+  assert.equal(r.success, false);
+});
+
+test('manifest-v5 fixtures: invalid/palette-untyped-action fails (G-ACTIONS §12 typed action, api=4 exception)', () => {
+  const r = ManifestSchema.safeParse(readFixture('invalid', 'palette-untyped-action.json'));
+  assert.equal(r.success, false);
+});
+
+test('manifest-v5 fixtures: invalid/palette-extra-key fails (.strict rejects unknown field)', () => {
+  const r = ManifestSchema.safeParse(readFixture('invalid', 'palette-extra-key.json'));
+  assert.equal(r.success, false);
 });
 
 // ─── WP-31 — workflows[] manifest field (DEC-41) ────────────────────────────

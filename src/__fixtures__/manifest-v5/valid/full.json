@@ -35,7 +35,7 @@
       {
         "id": "refresh",
         "label": "Refresh",
-        "shortcut": "mod+k mod+r",
+        "shortcut": "mod+shift+r",
         "action": { "kind": "dispatch", "prompt": "Refresh" }
       }
     ],
