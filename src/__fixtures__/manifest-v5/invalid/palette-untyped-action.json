@@ -1,0 +1,15 @@
+{
+  "id": "com.ikenga.untyped-action",
+  "name": "Untyped Action",
+  "version": "1.0.0",
+  "ikenga_api": "4",
+  "ui": {
+    "command_palette": [
+      {
+        "id": "sync",
+        "label": "Sync",
+        "action": "sync.now"
+      }
+    ]
+  }
+}

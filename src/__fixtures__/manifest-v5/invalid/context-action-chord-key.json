@@ -1,0 +1,17 @@
+{
+  "id": "com.ikenga.chord-key",
+  "name": "Chord Key",
+  "version": "1.0.0",
+  "ikenga_api": "5",
+  "ui": {
+    "context_actions": [
+      {
+        "id": "explain-file",
+        "label": "Explain this file",
+        "when": { "kind": "file" },
+        "run": { "kind": "dispatch", "prompt": "Explain {{file.path}}" },
+        "key": "mod+k mod+r"
+      }
+    ]
+  }
+}

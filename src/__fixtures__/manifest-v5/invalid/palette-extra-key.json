@@ -1,0 +1,16 @@
+{
+  "id": "com.ikenga.palette-extra-key",
+  "name": "Palette Extra Key",
+  "version": "1.0.0",
+  "ikenga_api": "5",
+  "ui": {
+    "command_palette": [
+      {
+        "id": "refresh",
+        "label": "Refresh",
+        "action": { "kind": "view", "route": "/refresh" },
+        "bogus": true
+      }
+    ]
+  }
+}
