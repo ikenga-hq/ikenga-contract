@@ -309,34 +309,7 @@
                     "type": "object",
                     "properties": {
                       "nav": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "id": {
-                              "type": "string"
-                            },
-                            "label": {
-                              "type": "string"
-                            },
-                            "icon": {
-                              "type": "string"
-                            },
-                            "section": {
-                              "type": "string"
-                            },
-                            "route": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "id",
-                            "label",
-                            "route"
-                          ],
-                          "additionalProperties": false
-                        },
-                        "default": []
+                        "not": {}
                       },
                       "routes": {
                         "type": "array",
@@ -382,7 +355,8 @@
                               "type": "string"
                             },
                             "shortcut": {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^\\S+$"
                             },
                             "action": {
                               "anyOf": [
@@ -648,7 +622,8 @@
                               ]
                             },
                             "key": {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^\\S+$"
                             }
                           },
                           "required": [
@@ -852,6 +827,71 @@
                       }
                     },
                     "additionalProperties": false
+                  },
+                  "workflows": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "steps": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "handler": {
+                                "type": "string",
+                                "pattern": "^\\/iyke\\/pkg\\/[a-z0-9]+(\\.[a-z0-9-]+)+\\/[a-z0-9][a-z0-9-]*(\\/[a-z0-9][a-z0-9-]*)*$"
+                              },
+                              "inputs": {
+                                "type": "object",
+                                "additionalProperties": {},
+                                "default": {}
+                              },
+                              "produces": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "default": []
+                              },
+                              "depends_on": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "default": []
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "title",
+                              "handler"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "minItems": 1
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "title",
+                        "steps"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "default": []
                   },
                   "capabilities": {
                     "type": "object",
