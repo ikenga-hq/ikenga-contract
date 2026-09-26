@@ -1,5 +1,26 @@
 # @ikenga/contract
 
+## 0.21.0
+
+### Minor Changes
+
+- 778d267: Add an optional `ui.context_actions[].key` (a package key request, DEC-54 / G-PKG-KEY) and type `ui.command_palette[].action` as the package run union (`dispatch` | `view`, previously `z.unknown()`) per G-ACTIONS §7 and §12 (`plans/shell-ux-rearchitecture/drafts/actions-schema.md`, frozen Round 39). Both additions are additive on manifest api 5 — no version bump — but `ContextActionEntrySchema` is `.strict()`, so a manifest declaring `key` is rejected by every contract/shell parser that predates this change, whatever `ikenga_api` it declares. Also exports `deriveContextActionKeyWhen`, the pure `ContextSelector` → derived key `when` function from G-ACTIONS §7.3 (mirrored in `shell/src-tauri/src/pkg/manifest.rs` as `derive_context_action_key_when`).
+- 4f3a502: Remove the `ui.nav` → `ui.views` alias (DEC-37 hard cutover). The alias had a
+  one-release lifetime (G-MANIFEST-V5 §4) and v0.12.0 of the shell was the
+  soft-warn release, so `ui.nav` is now rejected outright with the canonical
+  message naming `ui.views[]` as the replacement.
+
+  **BREAKING for manifests still on `ui.nav`** — including api=1..4 manifests;
+  the api version does not exempt them. `NavEntrySchema` stays exported for
+  tooling that reads historical manifests.
+
+### Patch Changes
+
+- 4807cf2: Add manifest-v5 fixtures for `workflows[]` (valid/workflows-basic,
+  valid/workflows-multi, invalid/workflows-bad-handler) so the shell's
+  `manifest_v5_parity` workflow test stops relying on its local stand-in.
+  Test fixtures only; no runtime change.
+
 ## 0.20.0
 
 ### Minor Changes
