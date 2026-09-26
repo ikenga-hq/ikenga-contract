@@ -3,10 +3,12 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 
 import {
+  CommandPaletteEntrySchema,
   CompanionPanelEntrySchema,
   ContextActionEntrySchema,
   ContextActionRunSchema,
   ContextSelectorSchema,
+  deriveContextActionKeyWhen,
   ExplorerSectionDataSchema,
   ExplorerSectionEntrySchema,
   HttpCapabilitySchema,
@@ -432,6 +434,121 @@ test('ContextActionEntry: full shape parses; missing when/run fails; .strict rej
       label: 'X',
       when: { kind: 'session' },
       run: { kind: 'view', route: '/x' },
+      bogus: true,
+    }),
+  );
+});
+
+test('ContextActionEntry: key is optional and parses; absence is additive', () => {
+  const withKey = ContextActionEntrySchema.parse({
+    id: 'explain-file',
+    label: 'Explain this file',
+    when: { kind: 'file', glob: '*.{ts,rs}' },
+    run: { kind: 'dispatch', prompt: 'Explain {{file.path}}' },
+    key: 'mod+shift+e',
+  });
+  assert.equal(withKey.key, 'mod+shift+e');
+
+  const withoutKey = ContextActionEntrySchema.parse({
+    id: 'x',
+    label: 'X',
+    when: { kind: 'session' },
+    run: { kind: 'view', route: '/x' },
+  });
+  assert.equal(withoutKey.key, undefined);
+});
+
+test('ContextActionEntry: a key request can never author "always" or an OS scope (DEC-54, G-ACTIONS §7.1)', () => {
+  // There is no `when` string field and no `scope` field on a package key
+  // request — only the ContextSelector `when` (already narrower than always
+  // by construction, §7.3) and the bare `key` string. `.strict()` rejects
+  // any attempt to smuggle one in alongside `key`.
+  assert.throws(() =>
+    ContextActionEntrySchema.parse({
+      id: 'x',
+      label: 'X',
+      when: { kind: 'file' },
+      run: { kind: 'view', route: '/x' },
+      key: 'mod+shift+e',
+      scope: 'os',
+    }),
+  );
+  assert.throws(() =>
+    ContextActionEntrySchema.parse({
+      id: 'x',
+      label: 'X',
+      when: { kind: 'file' },
+      run: { kind: 'view', route: '/x' },
+      key: 'mod+shift+e',
+      when_override: 'always',
+    }),
+  );
+});
+
+test('G-ACTIONS §7.3: deriveContextActionKeyWhen covers every ContextSelector variant', () => {
+  const cases: Array<[Parameters<typeof deriveContextActionKeyWhen>[0], string]> = [
+    [{ kind: 'file' }, 'filesFocus'],
+    [
+      { kind: 'file', glob: '*.{ts,rs}' },
+      "filesFocus && resource =~ '*.{ts,rs}'",
+    ],
+    [{ kind: 'artifact' }, "paneKind == 'artifact'"],
+    [{ kind: 'session' }, 'sessionFocus'],
+    [{ kind: 'ngwa-item' }, 'ngwaItemFocus'],
+    [{ kind: 'ngwa-item', kinds: [] }, 'ngwaItemFocus'],
+    [
+      { kind: 'ngwa-item', kinds: ['task'] },
+      "ngwaItemFocus && (ngwaItemKind == 'task')",
+    ],
+    [
+      { kind: 'ngwa-item', kinds: ['task', 'note'] },
+      "ngwaItemFocus && (ngwaItemKind == 'task' || ngwaItemKind == 'note')",
+    ],
+  ];
+  for (const [selector, expected] of cases) {
+    const when = deriveContextActionKeyWhen(selector);
+    assert.equal(when, expected, `selector ${JSON.stringify(selector)}`);
+    assert.notEqual(when, 'always', 'must be narrower than always');
+    assert.ok(when.length > 0, 'must not be empty (empty == always)');
+    assert.ok(!when.includes('scope'), 'derived when must never encode an OS-wide scope');
+  }
+});
+
+test('G-ACTIONS §7.3: deriveContextActionKeyWhen escapes quotes in a glob', () => {
+  const when = deriveContextActionKeyWhen({ kind: 'file', glob: "it's/*.rs" });
+  assert.equal(when, "filesFocus && resource =~ 'it\\'s/*.rs'");
+});
+
+test('G-ACTIONS §12 (G-70): CommandPaletteEntry.action is the typed run union', () => {
+  const p = CommandPaletteEntrySchema.parse({
+    id: 'release-status',
+    label: 'Release status',
+    shortcut: 'mod+k mod+r',
+    action: { kind: 'dispatch', prompt: 'Run release-status' },
+  });
+  assert.equal(p.action.kind, 'dispatch');
+  assert.equal(p.shortcut, 'mod+k mod+r');
+
+  const minimal = CommandPaletteEntrySchema.parse({
+    id: 'open-review',
+    label: 'Open review',
+    action: { kind: 'view', route: '/review' },
+  });
+  assert.equal(minimal.shortcut, undefined);
+  assert.equal(minimal.action.kind, 'view');
+
+  assert.throws(() =>
+    CommandPaletteEntrySchema.parse({
+      id: 'bad',
+      label: 'Bad',
+      action: { kind: 'shell', command: 'rm -rf /' },
+    }),
+  );
+  assert.throws(() =>
+    CommandPaletteEntrySchema.parse({
+      id: 'bad',
+      label: 'Bad',
+      action: { kind: 'view', route: '/x' },
       bogus: true,
     }),
   );

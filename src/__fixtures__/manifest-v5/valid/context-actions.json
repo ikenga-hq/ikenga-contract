@@ -16,7 +16,8 @@
           "kind": "dispatch",
           "prompt": "Review {{file.path}} in {{project.root}}",
           "target": "chi"
-        }
+        },
+        "key": "mod+shift+e"
       },
       {
         "id": "open-artifact",

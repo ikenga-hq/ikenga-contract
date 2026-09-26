@@ -24,6 +24,14 @@ import { BrowserEngineSchema } from './browser.js';
 // mapping, §4) and is now hard-retired by DEC-37 — declaring it fails validation,
 // as does ui.side_pane_viewers (§8 Q1 / DEC-34). All additions are optional-with-default, so api=1..4 manifests
 // parse unchanged; the support window stays [MIN_SUPPORTED, CURRENT].
+// WP-51 (G-PKG-KEY / G-ACTIONS §7, §12 — plans/shell-ux-rearchitecture/drafts/
+// actions-schema.md, frozen 2026-09-25 Round 39): added an optional
+// `ui.context_actions[].key` (a DEC-54 key request) and typed
+// `ui.command_palette[].action` as `ContextActionRunSchema` (was
+// `z.unknown()`). Both are additive on api 5 — no version bump — but `key`
+// sits on a `.strict()` object, so a manifest declaring it is rejected by
+// every parser that predates this change, whatever `ikenga_api` it declares
+// (g-manifest-v5 §11; the same caveat class as `workflows[]`, §10).
 export const IKENGA_API_VERSION = 5 as const;
 export const IKENGA_API_MIN_SUPPORTED = 1 as const;
 
@@ -112,13 +120,6 @@ export const UiRouteSchema = z.object({
   partition: z.string().optional(),
 });
 
-export const CommandPaletteEntrySchema = z.object({
-  id: z.string(),
-  label: z.string(),
-  shortcut: z.string().optional(),
-  action: z.unknown(),
-});
-
 export const SidePaneViewerSchema = z.object({
   id: z.string(),
   label: z.string(),
@@ -205,8 +206,9 @@ export type ContextSelector = z.infer<typeof ContextSelectorSchema>;
 
 export const ContextActionRunSchema = z.discriminatedUnion('kind', [
   /** "Hand to Chi" — fills the Companion dispatch bar (spec §5.3 resolveTarget).
-   *  `prompt` is a template with {{file.path}}, {{selection}}, {{project.root}},
-   *  {{pane.url}}, {{branch}} — the D-06 variable set. */
+   *  `prompt` is a template over the six-variable D-06 set: {{file.path}},
+   *  {{file.name}}, {{selection}}, {{project.root}}, {{pane.url}}, {{branch}}
+   *  — {{file.name}} added additively by WP-51 (DEC-63.4, G-ACTIONS §8.2). */
   z.object({ kind: z.literal('dispatch'), prompt: z.string(), target: z.string().optional() }),
   z.object({ kind: z.literal('view'), route: z.string() }),
 ]);
@@ -217,8 +219,72 @@ export const ContextActionEntrySchema = z.object({
   label: z.string(),
   when: ContextSelectorSchema,
   run: ContextActionRunSchema,
+  /** A DEC-54 key request (G-PKG-KEY, G-ACTIONS §7): a single stroke in the
+   *  registry grammar, never a chord. The request's `when` is NOT authored
+   *  here — it is derived deterministically from `when` above (the
+   *  ContextSelector) per G-ACTIONS §7.3, and is always narrower than
+   *  `always` and never OS-wide. Granted only if the key is free at merge
+   *  time (G-ACTIONS §7.4); otherwise the action arrives unbound. Older
+   *  shells (pre-WP-51) reject a manifest declaring this field outright,
+   *  since `ContextActionEntry` is `.strict()` / `deny_unknown_fields`
+   *  (g-manifest-v5 §11). */
+  key: z.string().optional(),
 }).strict();
 export type ContextActionEntry = z.infer<typeof ContextActionEntrySchema>;
+
+/** Escapes a string for embedding in a single-quoted DEC-62 `when` string
+ *  literal (grammar §4.1: `\'` and `\\` are the only escapes). */
+function escapeWhenString(s: string): string {
+  return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+/** G-ACTIONS §7.3 — derives a `ContextActionEntry.key` request's `when`
+ *  (DEC-62 form) from its `ContextSelector`. Every arm is narrower than
+ *  `always` by construction, so the result is always a well-formed `when`
+ *  `conflicts()` (WP-49/WP-52) can compare. This is the key `when` only —
+ *  never used for menu-visibility placement `when` (§7.3a, WP-52). Mirrors
+ *  `derive_context_action_key_when` in `shell/src-tauri/src/pkg/manifest.rs`;
+ *  keep the two in lockstep. */
+export function deriveContextActionKeyWhen(selector: ContextSelector): string {
+  switch (selector.kind) {
+    case 'file':
+      return selector.glob
+        ? `filesFocus && resource =~ '${escapeWhenString(selector.glob)}'`
+        : 'filesFocus';
+    case 'artifact':
+      return "paneKind == 'artifact'";
+    case 'session':
+      return 'sessionFocus';
+    case 'ngwa-item': {
+      const kinds = selector.kinds ?? [];
+      if (kinds.length === 0) return 'ngwaItemFocus';
+      const clause = kinds
+        .map((k) => `ngwaItemKind == '${escapeWhenString(k)}'`)
+        .join(' || ');
+      return `ngwaItemFocus && (${clause})`;
+    }
+  }
+}
+
+// ── ui.command_palette[].action — typed per G-ACTIONS §12 (G-70) ──────────
+// G-MANIFEST-V5 §8 Q3 left `action` untyped "until Phase 6 — D-06 owns the
+// action model" (`action: z.unknown()`). G-ACTIONS §12 types it as the same
+// package run union as `context_actions[]`. Strict, not tolerant: a sweep of
+// `ikenga-pkgs/` (57 manifests) and `ikenga-registry/` (30 catalog entries)
+// at the freeze found zero uses of `command_palette`, so there is no
+// published payload a strict type could break (G-ACTIONS §12).
+export const CommandPaletteEntrySchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  /** A DEC-54 key request (G-ACTIONS §12), handled exactly like
+   *  `ContextActionEntry.key`: single stroke, grant-if-free, rebindable.
+   *  Its derived `when` is always `!inputFocus`. Unlike `key`, this needs no
+   *  older-shell caveat for acceptance — pre-WP-51 parsers already accept
+   *  any `action` value and simply ignore `shortcut`. */
+  shortcut: z.string().optional(),
+  action: ContextActionRunSchema,
+}).strict();
+export type CommandPaletteEntry = z.infer<typeof CommandPaletteEntrySchema>;
 
 // ── ui.widgets[] — project-dashboard widgets (formalised home canvas) ──────
 export const WidgetEntrySchema = z.object({

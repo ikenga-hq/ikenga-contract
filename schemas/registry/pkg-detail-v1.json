@@ -384,11 +384,52 @@
                             "shortcut": {
                               "type": "string"
                             },
-                            "action": {}
+                            "action": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "dispatch"
+                                    },
+                                    "prompt": {
+                                      "type": "string"
+                                    },
+                                    "target": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "prompt"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "view"
+                                    },
+                                    "route": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "route"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            }
                           },
                           "required": [
                             "id",
-                            "label"
+                            "label",
+                            "action"
                           ],
                           "additionalProperties": false
                         },
@@ -605,6 +646,9 @@
                                   "additionalProperties": false
                                 }
                               ]
+                            },
+                            "key": {
+                              "type": "string"
                             }
                           },
                           "required": [

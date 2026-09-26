@@ -11,7 +11,12 @@
       { "id": "home", "title": "Home", "icon": "home", "route": "/home" }
     ],
     "command_palette": [
-      { "id": "sync", "label": "Sync", "shortcut": "ctrl+shift+s", "action": "sync.now" }
+      {
+        "id": "sync",
+        "label": "Sync",
+        "shortcut": "ctrl+shift+s",
+        "action": { "kind": "view", "route": "/home" }
+      }
     ]
   },
   "capabilities": {
