@@ -24,19 +24,19 @@ await emit(
   'artifact/v0.json',
   ArtifactManifestSchema,
   'IkengaArtifactManifest',
-  'https://royalti-io.github.io/ikenga-contract/schemas/artifact/v0.json',
+  'https://registry.ikenga.dev/schemas/artifact/v0.json',
 );
 
 await emit(
   'registry/index-v1.json',
   RegistryIndexSchema,
   'IkengaRegistryIndex',
-  'https://royalti-io.github.io/ikenga-contract/schemas/registry/index-v1.json',
+  'https://registry.ikenga.dev/schemas/registry/index-v1.json',
 );
 
 await emit(
   'registry/pkg-detail-v1.json',
   PkgDetailSchema,
   'IkengaRegistryPkgDetail',
-  'https://royalti-io.github.io/ikenga-contract/schemas/registry/pkg-detail-v1.json',
+  'https://registry.ikenga.dev/schemas/registry/pkg-detail-v1.json',
 );

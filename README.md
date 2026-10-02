@@ -1,7 +1,7 @@
 # @ikenga/contract
 
 [![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/ikenga-hq/ikenga-contract/actions)
-[![Version](https://img.shields.io/badge/version-v0.2.0-blue.svg)](https://github.com/ikenga-hq/ikenga-contract/releases)
+[![Version](https://img.shields.io/badge/version-v0.21.0-blue.svg)](https://github.com/ikenga-hq/ikenga-contract/releases)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Discussions](https://img.shields.io/badge/community-discussions-5865F2.svg)](https://github.com/ikenga-hq/ikenga-contract/discussions)
 
@@ -28,7 +28,7 @@ In the workspace, this resolves as `workspace:*`.
 
 | Module | Exports |
 |--------|---------|
-| `@ikenga/contract/manifest` | `ikenga-pkg.toml` schema (Zod) — `ManifestSchema`, `Manifest` type |
+| `@ikenga/contract/manifest` | `manifest.json` schema (Zod) — `ManifestSchema`, `Manifest` type |
 | `@ikenga/contract/rpc` | Shell ↔ pkg postMessage RPC envelope, request/response types |
 | `@ikenga/contract/engine` | `Engine` interface, `Session`, `EngineEvent` types |
 | `@ikenga/contract/scopes` | Capability scope catalogue (`tasks:read`, `engine:invoke`, …) |
@@ -44,7 +44,7 @@ light up with live data inside the shell.
 
 - Source of truth: `src/artifact.ts` (Zod).
 - Generated JSON Schema: `schemas/artifact/v0.json` — regenerate with `pnpm generate:schemas` after schema edits.
-- Published at: `https://royalti-io.github.io/ikenga-contract/schemas/artifact/v0.json` (`$id` stamped at generation time).
+- Published at: `https://registry.ikenga.dev/schemas/artifact/v0.json` (`$id` stamped at generation time).
 - Fixtures (the three v0 example artifacts) live in `src/artifact-fixtures/` and are gated by `pnpm test`.
 
 ## Versioning
@@ -62,9 +62,10 @@ change the manifest, change the Rust struct first and update this schema in lock
 
 ## Status
 
-`v0.2.0` — manifest realigned to the real Rust schema (was a speculative parallel in
-v0.1.0). RPC method catalogue, engine interface, and capability scopes are still in place
-but unused by the kernel today; treat them as forward-looking.
+`v0.21.0` — see [`CHANGELOG.md`](CHANGELOG.md) for per-release changes. The manifest was
+realigned to the real Rust schema in v0.2.0 (it began as a speculative parallel in v0.1.0).
+RPC method catalogue, engine interface, and capability scopes are still in place but
+unused by the kernel today; treat them as forward-looking.
 
 ## Links
 
