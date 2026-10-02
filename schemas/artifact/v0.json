@@ -634,5 +634,5 @@
     }
   },
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://royalti-io.github.io/ikenga-contract/schemas/artifact/v0.json"
+  "$id": "https://registry.ikenga.dev/schemas/artifact/v0.json"
 }
