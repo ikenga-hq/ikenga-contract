@@ -41,6 +41,22 @@
                   "public",
                   "hidden"
                 ]
+              },
+              "ngwaKind": {
+                "type": "string",
+                "enum": [
+                  "app",
+                  "engine",
+                  "tool",
+                  "sidecar",
+                  "skill",
+                  "agent",
+                  "command",
+                  "hook",
+                  "bundle",
+                  "schedule",
+                  "workflow"
+                ]
               }
             },
             "required": [
