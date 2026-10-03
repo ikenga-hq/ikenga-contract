@@ -15,6 +15,7 @@
 
 import { z } from 'zod';
 import { ManifestSchema } from './manifest.js';
+import { NgwaKindSchema } from './ngwa.js';
 
 export const REGISTRY_SCHEMA_VERSION = 1 as const;
 
@@ -114,6 +115,18 @@ export const RegistryEntrySchema = z.object({
    * curation step (`ikenga-pkgs/scripts/update-registry-index.mjs`).
    */
   visibility: z.enum(['public', 'hidden']).optional(),
+  /**
+   * What the pkg actually is, derived from its manifest when the registry
+   * index is written, so every consumer gets the same answer instead of
+   * re-deriving it from the free-form `kind` hint. First match wins: an
+   * `engine` block is an engine; `kind: "bundle"` is a bundle; any `ui`
+   * block (even an empty one) is an app; one or more `mcp` servers is a
+   * tool; one or more `sidecars` is a sidecar; `kind: "skill"` is a skill;
+   * anything else is an app. Additive: `kind` is unchanged, and readers
+   * built before this field existed ignore it. Absent on rows written
+   * before the index was next updated.
+   */
+  ngwaKind: NgwaKindSchema.optional(),
 });
 export type RegistryEntry = z.infer<typeof RegistryEntrySchema>;
 
