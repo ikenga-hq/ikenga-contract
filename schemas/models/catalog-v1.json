@@ -1,0 +1,183 @@
+{
+  "$ref": "#/definitions/IkengaModelCatalog",
+  "definitions": {
+    "IkengaModelCatalog": {
+      "type": "object",
+      "properties": {
+        "$schema": {
+          "type": "string",
+          "const": "https://registry.ikenga.dev/schemas/models/catalog-v1.json"
+        },
+        "version": {
+          "type": "number",
+          "const": 1
+        },
+        "pricingUnit": {
+          "type": "string",
+          "const": "USD per million tokens"
+        },
+        "defaultModel": {
+          "type": "string"
+        },
+        "roles": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "propertyNames": {
+            "enum": [
+              "chi",
+              "pane",
+              "plan"
+            ]
+          }
+        },
+        "aliases": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "propertyNames": {
+            "enum": [
+              "opus",
+              "sonnet",
+              "haiku",
+              "fable"
+            ]
+          }
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^claude-[a-z]+-[0-9]+(-[0-9]+)*$"
+              },
+              "alias": {
+                "type": "string",
+                "enum": [
+                  "opus",
+                  "sonnet",
+                  "haiku",
+                  "fable"
+                ]
+              },
+              "family": {
+                "type": "string",
+                "minLength": 1
+              },
+              "tier": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "contextTokens": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "pricing": {
+                "type": "object",
+                "properties": {
+                  "inPerMtok": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "outPerMtok": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "cacheReadPerMtok": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "cacheWritePerMtok": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "inPerMtok",
+                  "outPerMtok",
+                  "cacheReadPerMtok",
+                  "cacheWritePerMtok"
+                ],
+                "additionalProperties": false
+              },
+              "pricingVerifiedAt": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "source": {
+                "type": "string",
+                "minLength": 1
+              },
+              "defaultFor": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "chi",
+                    "pane",
+                    "plan"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "id",
+              "alias",
+              "family",
+              "tier",
+              "contextTokens",
+              "pricing",
+              "pricingVerifiedAt",
+              "source"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "$schema",
+        "version",
+        "pricingUnit",
+        "defaultModel",
+        "roles",
+        "aliases",
+        "models"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://registry.ikenga.dev/schemas/models/catalog-v1.json"
+}

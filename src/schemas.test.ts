@@ -9,7 +9,7 @@ import { RegistryEntrySchema } from './registry.js';
 // The generator is a plain script; it reads the compiled output in `dist/`,
 // so `pnpm build` must run before this test (CI does).
 // @ts-expect-error -- no type declarations for the .mjs script
-import { buildSchemas, serializeSchema } from '../scripts/generate-schemas.mjs';
+import { buildSchemas, buildData, serializeSchema } from '../scripts/generate-schemas.mjs';
 
 type Built = { relPath: string; json: Record<string, any> };
 
@@ -24,7 +24,7 @@ function find(relPath: string): Record<string, any> {
 
 // Staleness: the committed files are the output of the generator. When this
 // fails, run `pnpm build && pnpm generate:schemas` and commit the result.
-for (const { relPath, json } of built) {
+for (const { relPath, json } of [...built, ...(buildData() as Built[])]) {
   test(`schemas/${relPath} matches the generator output`, () => {
     const committed = readFileSync(path.join(root, 'schemas', relPath), 'utf8').replace(/\r\n/g, '\n');
     assert.equal(

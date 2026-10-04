@@ -79,6 +79,10 @@
     "./workflow-graph": {
       "types": "./dist/workflow-graph.d.ts",
       "import": "./dist/workflow-graph.js"
+    },
+    "./models": {
+      "types": "./dist/models.d.ts",
+      "import": "./dist/models.js"
     }
   },
   "files": [

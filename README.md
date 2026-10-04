@@ -33,6 +33,21 @@ In the workspace, this resolves as `workspace:*`.
 | `@ikenga/contract/engine` | `Engine` interface, `Session`, `EngineEvent` types |
 | `@ikenga/contract/scopes` | Capability scope catalogue (`tasks:read`, `engine:invoke`, …) |
 | `@ikenga/contract/artifact` | Artifact manifest schema (Zod) — `ArtifactManifestSchema`, `ArtifactManifest` type, refresh / data-source / fallback sub-schemas |
+| `@ikenga/contract/models` | Claude model catalog — `MODEL_CATALOG`, `defaultModelFor(role)`, `MODEL_TIER_ALIASES`, `findModel`, `estimateCostUsd` |
+
+## Model catalog
+
+The one table of Claude model ids, context windows and per-million-token prices that
+every Ikenga surface reads (the shell's Claude launch, the engine pkg, the model picker,
+the cost meter). Each row records the date its prices were checked and where.
+
+- Source of truth: `src/models.ts` (Zod-validated).
+- Generated JSON copy for Rust and manifests: `schemas/models.json` (schema:
+  `schemas/models/catalog-v1.json`). It carries the rows plus resolved `roles` and
+  `aliases`. Regenerate with `pnpm build && pnpm generate:schemas`; a test fails when
+  the committed file is stale.
+- Role defaults: `chi` and `pane` → Sonnet; `plan` → Opus. Change a price only after
+  re-checking the published pricing page, and update `pricingVerifiedAt`.
 
 ## Artifact manifest
 
