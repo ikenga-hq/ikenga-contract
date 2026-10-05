@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Generates JSON Schema files from Zod sources of truth.
+// Generates JSON Schema files from Zod sources of truth, plus the generated
+// data files (the model catalog JSON).
 // Run via: pnpm generate:schemas
 //
 // `buildSchemas()` is pure (it returns the documents and writes nothing), so
@@ -17,6 +18,11 @@ import {
   IKENGA_API_VERSION,
   IKENGA_API_MIN_SUPPORTED,
 } from '../dist/manifest.js';
+import {
+  ModelCatalogFileSchema,
+  MODEL_CATALOG_SCHEMA_ID,
+  buildModelCatalogFile,
+} from '../dist/models.js';
 
 const here = fileURLToPath(import.meta.url);
 const root = path.resolve(path.dirname(here), '..');
@@ -70,7 +76,17 @@ export function buildSchemas() {
       'IkengaRegistryPkgDetail',
       'https://registry.ikenga.dev/schemas/registry/pkg-detail-v1.json',
     ),
+    emit('models/catalog-v1.json', ModelCatalogFileSchema, 'IkengaModelCatalog', MODEL_CATALOG_SCHEMA_ID),
   ];
+}
+
+/**
+ * Generated data files (not schemas) as `{ relPath, json }`, relative to
+ * `schemas/`. `models.json` is the Claude model catalog for readers that can't
+ * import TypeScript: the Rust shell and pkg manifests.
+ */
+export function buildData() {
+  return [{ relPath: 'models.json', json: buildModelCatalogFile() }];
 }
 
 /** The exact bytes written for one schema: 2-space JSON, final newline. */
@@ -79,7 +95,7 @@ export function serializeSchema(json) {
 }
 
 async function main() {
-  for (const { relPath, json } of buildSchemas()) {
+  for (const { relPath, json } of [...buildSchemas(), ...buildData()]) {
     const out = path.join(root, 'schemas', relPath);
     await mkdir(path.dirname(out), { recursive: true });
     await writeFile(out, serializeSchema(json), 'utf8');
