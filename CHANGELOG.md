@@ -1,5 +1,12 @@
 # @ikenga/contract
 
+## 0.22.0
+
+### Minor Changes
+
+- cfe5e7e: Publish a JSON Schema for the pkg manifest at `schemas/manifest/v5.json` (it ships in the npm package), generated from `ManifestSchema` by `pnpm generate:schemas`. A new test fails when the committed file is out of date. The registry index schema gains an optional `ngwaKind` on each row: what the pkg actually is (app, engine, tool, sidecar, skill or bundle), derived from its manifest when the index is written. Existing readers ignore the new field.
+- 6546a4b: Add a Claude model catalog at `@ikenga/contract/models` (also exported from the package root): `MODEL_CATALOG` with ids, tier aliases, context windows and verified per-million-token prices (input, output, cache read, 5-minute cache write), plus `defaultModelFor(role)` for the `chi`, `pane` and `plan` launch roles, `MODEL_TIER_ALIASES`, `findModel` and `estimateCostUsd`. A generated JSON copy ships at `schemas/models.json`, described by `schemas/models/catalog-v1.json`, for the Rust shell and pkg manifests; `pnpm generate:schemas` writes it and a test fails when it is stale.
+
 ## 0.21.0
 
 ### Minor Changes
