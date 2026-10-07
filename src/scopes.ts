@@ -1,6 +1,8 @@
 // Capability scopes a pkg can request in its manifest. The kernel enforces
 // these at the IPC boundary — scope-denied requests fail with
-// `RpcErrorCode.scope_denied` before reaching the handler.
+// `RpcErrorCode.scope_denied` before reaching the handler. When the shell
+// can't read the pkg's manifest to check, the request still fails, but with
+// `scope_check_unavailable` (not a denial; a retry may succeed). See rpc.ts.
 //
 // Scope syntax: `<resource>:<action>` or `<resource>:<action>:<qualifier>`
 //

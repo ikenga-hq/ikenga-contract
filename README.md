@@ -29,11 +29,37 @@ In the workspace, this resolves as `workspace:*`.
 | Module | Exports |
 |--------|---------|
 | `@ikenga/contract/manifest` | `manifest.json` schema (Zod) — `ManifestSchema`, `Manifest` type |
-| `@ikenga/contract/rpc` | Shell ↔ pkg postMessage RPC envelope, request/response types |
+| `@ikenga/contract/rpc` | Shell ↔ pkg postMessage RPC envelope, request/response types, `RPC_ERROR_CODES`, `host.*` refusal shape (`hostRefusalCode`) |
 | `@ikenga/contract/engine` | `Engine` interface, `Session`, `EngineEvent` types |
 | `@ikenga/contract/scopes` | Capability scope catalogue (`tasks:read`, `engine:invoke`, …) |
 | `@ikenga/contract/artifact` | Artifact manifest schema (Zod) — `ArtifactManifestSchema`, `ArtifactManifest` type, refresh / data-source / fallback sub-schemas |
 | `@ikenga/contract/models` | Claude model catalog — `MODEL_CATALOG`, `defaultModelFor(role)`, `MODEL_TIER_ALIASES`, `findModel`, `estimateCostUsd` |
+
+## Denied vs. couldn't check
+
+A capability check has three outcomes, and a pkg can tell them apart:
+
+- **Granted** — the call runs.
+- **Denied** — the shell read the pkg's manifest and it doesn't declare the scope. RPC code
+  `scope_denied`; on `host.*` verbs, `structuredContent.reason: 'scope-denied'`. Retrying
+  won't help; declare the scope.
+- **Couldn't check** — the kernel or manifest read failed. The call is still refused, but it
+  is not a denial and a retry may succeed. RPC code `scope_check_unavailable` (with optional
+  `ScopeCheckUnavailableData`); on `host.*` verbs, `reason: 'check-unavailable'`.
+
+`hostRefusalCode(res.structuredContent)` maps a `host.*` refusal to the RPC code. It returns
+`null` for a refusal with no `reason` or an unrecognised one: treat that as "unknown", not as
+a confirmed denial. Branch on codes and reasons, never on message text.
+
+**Shell support.** These codes are defined here first; the shell adopts them after this
+contract release (ikenga-hq/ikenga). Until then, shells send `reason: 'scope-denied'` only on
+some `host.*` verbs, other `host.*` denials carry only `error` (so `hostRefusalCode` returns
+`null`), and nothing sends `scope_check_unavailable` / `'check-unavailable'` yet. Keep a
+`default` branch for `null`.
+
+Other `reason` values a shell may put on a `host.*` result — for example `'unavailable'`,
+`'cancelled'` or `'failed'` from an agent dispatch — describe the action itself, not a
+capability check. They are not `HostRefusalReason`s and `hostRefusalCode` returns `null` for them.
 
 ## Model catalog
 
