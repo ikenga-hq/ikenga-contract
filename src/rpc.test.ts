@@ -65,11 +65,13 @@ test('hostRefusalCode: scope-denied with reason only (host.notify shape) maps to
   assert.equal(hostRefusalCode({ ok: false, reason: 'scope-denied' }), 'scope_denied');
 });
 
-test('hostRefusalCode: legacy refusal without reason, unknown reason, success, junk give null', () => {
+test('hostRefusalCode: reason-less refusal (unknown, not denied), unknown reason, dispatch reasons, success, junk give null', () => {
   const cases: unknown[] = [
     { ok: false, error: "host.dbQuery: pkg lacks the 'sqlite' capability" },
     { ok: false, error: 'x', reason: 'something-new' },
     { ok: false, reason: 'toString' },
+    { ok: false, reason: 'unavailable', message: 'runner refused' },
+    { ok: false, reason: 'cancelled' },
     { ok: true, reason: 'check-unavailable' },
     null,
     'check-unavailable',

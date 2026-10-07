@@ -88,12 +88,19 @@ export interface ScopeCheckUnavailableData {
 // iframe via `app.callServerTool`) don't use the RPC envelope above. A refused
 // call resolves with `isError: true` and a `structuredContent` shaped like
 // `HostCallRefusal`. `reason` is additive: older shells omit it, and some
-// denials carry only `error`. Pkgs should branch on `reason` (or on
-// `hostRefusalCode()`), never on the `error` text.
+// denials carry only `error`. A refusal without a known `reason` is "unknown"
+// (`hostRefusalCode()` returns null), not a confirmed denial. Pkgs should
+// branch on `reason` (or on `hostRefusalCode()`), never on the `error` text.
+//
+// Shell adoption follows this contract release: until then no shell sends
+// `check-unavailable`, and only some verbs send `scope-denied`.
 
-/** Why the shell refused a `host.*` call.
+/** Why the shell refused a `host.*` call's capability check.
  *  - `scope-denied`      — same meaning as RPC `scope_denied`
- *  - `check-unavailable` — same meaning as RPC `scope_check_unavailable` */
+ *  - `check-unavailable` — same meaning as RPC `scope_check_unavailable`
+ *  Dispatch outcomes some verbs report in `reason` (e.g. `'unavailable'`,
+ *  `'cancelled'`, `'failed'`) are about the action, not the capability check,
+ *  and are deliberately not members. */
 export const HOST_REFUSAL_REASONS = ['scope-denied', 'check-unavailable'] as const;
 export type HostRefusalReason = (typeof HOST_REFUSAL_REASONS)[number];
 
@@ -108,19 +115,22 @@ export interface HostCallRefusal {
   /** Human-readable message (the same text as `content[0].text`). Some
    *  refusals (e.g. `host.notify` scope-denied) carry only `reason`. */
   error?: string;
-  /** Set where it distinguishes the case. Absent on refusals that predate it:
-   *  treat those as a generic failure, not as a confirmed denial. Treat an
-   *  unknown value from a newer shell like absence. */
+  /** Set where it distinguishes the case. Absent on refusals that predate it
+   *  (and, until the shell adopts this contract, on some current denials):
+   *  treat those as unknown, not as a confirmed denial. Treat any other value
+   *  (a newer shell's, or a dispatch outcome) like absence. */
   reason?: HostRefusalReason | (string & {});
 }
 
 /** Map a `host.*` call's `structuredContent` to the matching `RpcErrorCode`,
- *  or `null` when it isn't a refusal with a known `reason`. Lets a pkg handle
- *  both transports with one switch:
+ *  or `null` when it isn't a refusal with a known `reason` (including
+ *  reason-less refusals: unknown, not denied). Lets a pkg handle both
+ *  transports with one switch:
  *
  *    switch (hostRefusalCode(res.structuredContent)) {
  *      case 'scope_denied':            // declare the scope
  *      case 'scope_check_unavailable': // transient: retry / show "couldn't check"
+ *      default:                        // null: unknown refusal — show `error`
  *    } */
 export function hostRefusalCode(structuredContent: unknown): RpcErrorCode | null {
   if (!structuredContent || typeof structuredContent !== 'object') return null;
