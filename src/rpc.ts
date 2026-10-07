@@ -31,13 +31,104 @@ export interface RpcResponseErr {
 export type RpcResponse<T = unknown> = RpcResponseOk<T> | RpcResponseErr;
 export type RpcMessage = RpcRequest | RpcResponse;
 
-export type RpcErrorCode =
-  | 'method_not_found'
-  | 'invalid_params'
-  | 'scope_denied'
-  | 'pkg_not_authenticated'
-  | 'shell_unavailable'
-  | 'internal_error';
+/** Every `RpcErrorCode`, in declaration order. Use for runtime checks
+ *  (`isRpcErrorCode`) and exhaustive switches. Adding a code is a
+ *  backward-compatible (minor) contract change; removing one is breaking.
+ *
+ *  - `method_not_found`        — no handler for `method`
+ *  - `invalid_params`          — `params` failed validation
+ *  - `scope_denied`            — the shell read the pkg's manifest and it does
+ *                                not declare the scope/capability the call
+ *                                needs. A definite "no": retrying won't help;
+ *                                the pkg must declare the scope.
+ *  - `scope_check_unavailable` — the shell could not *check* the capability
+ *                                (kernel status or manifest read failed). The
+ *                                call is still refused (fail-closed), but this
+ *                                is NOT a denial: the pkg may hold the scope,
+ *                                and a retry can succeed. `error.data` is
+ *                                `ScopeCheckUnavailableData`.
+ *  - `pkg_not_authenticated`   — the pkg has no session / credential
+ *  - `shell_unavailable`       — the shell itself (or the transport) is not
+ *                                reachable. Distinct from
+ *                                `scope_check_unavailable`, where the shell
+ *                                answered but its capability lookup failed.
+ *  - `internal_error`          — anything else */
+export const RPC_ERROR_CODES = [
+  'method_not_found',
+  'invalid_params',
+  'scope_denied',
+  'scope_check_unavailable',
+  'pkg_not_authenticated',
+  'shell_unavailable',
+  'internal_error',
+] as const;
+
+export type RpcErrorCode = (typeof RPC_ERROR_CODES)[number];
+
+export function isRpcErrorCode(v: unknown): v is RpcErrorCode {
+  return typeof v === 'string' && (RPC_ERROR_CODES as readonly string[]).includes(v);
+}
+
+/** `error.data` for `scope_check_unavailable`. Every field is optional, so a
+ *  shell may send the code with no data at all. */
+export interface ScopeCheckUnavailableData {
+  /** The scope or capability that could not be checked, e.g. `tasks:read`
+   *  or `capabilities.sqlite`. */
+  scope?: string;
+  /** Why the check couldn't run (the kernel / manifest read error text).
+   *  Diagnostic only; don't match on it. */
+  detail?: string;
+  /** Always `true` when present: a later call may succeed. */
+  retryable?: true;
+}
+
+// ---------- host.* verb refusals ----------
+//
+// `host.*` verbs (dispatched FE-side by the iframe host, invoked from the
+// iframe via `app.callServerTool`) don't use the RPC envelope above. A refused
+// call resolves with `isError: true` and a `structuredContent` shaped like
+// `HostCallRefusal`. `reason` is additive: older shells omit it, and some
+// denials carry only `error`. Pkgs should branch on `reason` (or on
+// `hostRefusalCode()`), never on the `error` text.
+
+/** Why the shell refused a `host.*` call.
+ *  - `scope-denied`      — same meaning as RPC `scope_denied`
+ *  - `check-unavailable` — same meaning as RPC `scope_check_unavailable` */
+export const HOST_REFUSAL_REASONS = ['scope-denied', 'check-unavailable'] as const;
+export type HostRefusalReason = (typeof HOST_REFUSAL_REASONS)[number];
+
+export const HOST_REFUSAL_REASON_TO_RPC_CODE: Readonly<Record<HostRefusalReason, RpcErrorCode>> = {
+  'scope-denied': 'scope_denied',
+  'check-unavailable': 'scope_check_unavailable',
+};
+
+/** `structuredContent` of a refused `host.*` call. */
+export interface HostCallRefusal {
+  ok: false;
+  /** Human-readable message (the same text as `content[0].text`). Some
+   *  refusals (e.g. `host.notify` scope-denied) carry only `reason`. */
+  error?: string;
+  /** Set where it distinguishes the case. Absent on refusals that predate it:
+   *  treat those as a generic failure, not as a confirmed denial. Treat an
+   *  unknown value from a newer shell like absence. */
+  reason?: HostRefusalReason | (string & {});
+}
+
+/** Map a `host.*` call's `structuredContent` to the matching `RpcErrorCode`,
+ *  or `null` when it isn't a refusal with a known `reason`. Lets a pkg handle
+ *  both transports with one switch:
+ *
+ *    switch (hostRefusalCode(res.structuredContent)) {
+ *      case 'scope_denied':            // declare the scope
+ *      case 'scope_check_unavailable': // transient: retry / show "couldn't check"
+ *    } */
+export function hostRefusalCode(structuredContent: unknown): RpcErrorCode | null {
+  if (!structuredContent || typeof structuredContent !== 'object') return null;
+  const sc = structuredContent as { ok?: unknown; reason?: unknown };
+  if (sc.ok !== false || typeof sc.reason !== 'string') return null;
+  if (!(HOST_REFUSAL_REASONS as readonly string[]).includes(sc.reason)) return null;
+  return HOST_REFUSAL_REASON_TO_RPC_CODE[sc.reason as HostRefusalReason];
+}
 
 // ---------- Notifications (one-way, pkg → shell or shell → pkg) ----------
 
